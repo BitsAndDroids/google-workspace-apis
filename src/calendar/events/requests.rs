@@ -50,6 +50,11 @@ impl EventOrderBy {
     }
 }
 
+/** Event types for Google Calendar events.
+* These are used to filter events when making requests.
+* See [Google Calendar API
+* documentation](https://developers.google.com/calendar/api/v3/reference/events
+*/
 pub enum EventType {
     Birthday,
     Default,

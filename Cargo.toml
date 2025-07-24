@@ -4,13 +4,17 @@ description = "A Rust library for interacting with Google Workspace APIs"
 repository = "https://github.com/BitsAndDroids/google-workspace-apis"
 keywords = ["google", "workspace", "apis", "rust", "library"]
 categories = ["web-programming", "api-bindings", "web-programming::http-client"]
-version = "0.3.1"
+version = "0.3.2"
 edition = "2024"
 license = "MIT"
 
 [features]
 calendar = []
 tasks = []
+
+[package.metadata.docs.rs]
+all-features = true
+
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
