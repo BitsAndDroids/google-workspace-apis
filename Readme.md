@@ -23,5 +23,5 @@ The calls that are currently supported are:
 To include the correct API client, you need to define the feature in your `Cargo.toml` file:
 
 ```toml
-google-workspaces-api: { version: "0.1", features = ["calendar", "tasks"] }
+google-workspaces-api = { version: "0.1", features = ["calendar", "tasks"] }
 ```
