@@ -1,0 +1,15 @@
+[package]
+name = "google-workspace-apis"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+calendar = []
+tasks = []
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+schemars = { version = "1.0", features = ["uuid1", "chrono04"] }
+reqwest = { version = "0.12", features = ["json"] }
+chrono = { version = "0.4", features = ["serde", "alloc"] }
