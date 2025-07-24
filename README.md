@@ -8,6 +8,12 @@ This library aims to provide a unified interface for all Google Workspace APIs.
 
 I'm currently working on the following APIs (more will be added soon):
 
+### Auth
+
+- Get OAuth url
+- Get Access token
+- Refresh token
+
 ### Calendar (WIP)
 
 For the API documentation, see the [Calender API documentation](https://developers.google.com/workspace/calendar/api/guides/overview).
