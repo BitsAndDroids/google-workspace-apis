@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use chrono::DateTime;
+
 pub struct Request {
     pub client: reqwest::Client,
     pub url: String,
@@ -7,10 +9,10 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn new(url: String, client: reqwest::Client) -> Self {
+    pub fn new(client: reqwest::Client) -> Self {
         Self {
             client,
-            url,
+            url: "".to_string(),
             params: HashMap::new(),
         }
     }
@@ -22,6 +24,6 @@ pub trait PaginationRequestTrait {
 }
 
 pub trait TimeRequestTrait {
-    fn min_time(self, max: i64) -> Self;
-    fn max_time(self, token: &str) -> Self;
+    fn time_min(self, max: DateTime<chrono::Utc>) -> Self;
+    fn time_max(self, token: DateTime<chrono::Utc>) -> Self;
 }

@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
-use crate::utils::request::PaginationRequestTrait;
+use crate::utils::request::{PaginationRequestTrait, TimeRequestTrait};
 
-use super::events::types::EventList;
 use chrono::DateTime;
-use reqwest::Method;
+use reqwest::{Error, Method};
+
+use super::types::EventList;
 
 pub trait EventRequestBuilderTrait: PaginationRequestTrait + TimeRequestTrait {
     type EventRequestBuilder;
@@ -16,7 +17,7 @@ pub trait EventRequestBuilderTrait: PaginationRequestTrait + TimeRequestTrait {
     fn single_events(self, single: bool) -> Self;
     fn show_hidden_invitations(self, max: bool) -> Self;
     fn query(self, query_str: &str) -> Self;
-    fn request(self) -> impl Future<Output = EventList>;
+    fn request(self) -> impl Future<Output = Result<Option<EventList>, Error>>;
 }
 
 pub enum EventOrderBy {
@@ -60,7 +61,7 @@ pub struct EventRequestBuilder {
     params: HashMap<String, String>,
 }
 
-impl DefaultRequestBuilder for EventRequestBuilder {
+impl PaginationRequestTrait for EventRequestBuilder {
     fn max_results(mut self, max: i64) -> Self {
         self.params
             .insert("maxResults".to_string(), max.to_string());
@@ -72,7 +73,9 @@ impl DefaultRequestBuilder for EventRequestBuilder {
             .insert("pageToken".to_string(), token.to_string());
         self
     }
+}
 
+impl TimeRequestTrait for EventRequestBuilder {
     fn time_min(mut self, time_min: DateTime<chrono::Utc>) -> Self {
         self.params
             .insert("timeMin".to_string(), time_min.to_rfc3339());
@@ -130,25 +133,13 @@ impl EventRequestBuilderTrait for EventRequestBuilder {
         self
     }
 
-    fn show_hidden_invitations(mut self, max: bool) -> Self {
-        self.params
-            .insert("showHiddenInvitations".to_string(), max.to_string());
-        self
-    }
-
-    fn query(mut self, query_str: &str) -> Self {
-        self.params.insert("q".to_string(), query_str.to_string());
-        self
-    }
-
-    async fn request(self) -> EventList {
+    async fn request(self) -> Result<Option<EventList>, Error> {
         let response = self
             .client
             .request(Method::GET, self.url)
             .query(&self.params)
             .send()
-            .await
-            .unwrap();
+            .await?;
         let url = &response.url().clone();
         println!("Requesting URL: {url}");
         let url_status = &response.status();
@@ -159,32 +150,8 @@ impl EventRequestBuilderTrait for EventRequestBuilder {
                 println!("URL {url} Status {url_status}");
                 None
             }
-        }
-        .unwrap();
-        calendar_res.unwrap()
-    }
+        };
 
-    fn max_results(mut self, max: i64) -> Self {
-        self.params
-            .insert("maxResults".to_string(), max.to_string());
-        self
-    }
-
-    fn page_token(mut self, token: &str) -> Self {
-        self.params
-            .insert("pageToken".to_string(), token.to_string());
-        self
-    }
-
-    fn time_min(mut self, time_min: DateTime<chrono::Utc>) -> Self {
-        self.params
-            .insert("timeMin".to_string(), time_min.to_rfc3339());
-        self
-    }
-
-    fn time_max(mut self, time_max: DateTime<chrono::Utc>) -> Self {
-        self.params
-            .insert("timeMax".to_string(), time_max.to_rfc3339());
-        self
+        Ok(calendar_res)
     }
 }
