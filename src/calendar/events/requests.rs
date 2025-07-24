@@ -60,6 +60,32 @@ pub struct EventRequestBuilder {
     params: HashMap<String, String>,
 }
 
+impl DefaultRequestBuilder for EventRequestBuilder {
+    fn max_results(mut self, max: i64) -> Self {
+        self.params
+            .insert("maxResults".to_string(), max.to_string());
+        self
+    }
+
+    fn page_token(mut self, token: &str) -> Self {
+        self.params
+            .insert("pageToken".to_string(), token.to_string());
+        self
+    }
+
+    fn time_min(mut self, time_min: DateTime<chrono::Utc>) -> Self {
+        self.params
+            .insert("timeMin".to_string(), time_min.to_rfc3339());
+        self
+    }
+
+    fn time_max(mut self, time_max: DateTime<chrono::Utc>) -> Self {
+        self.params
+            .insert("timeMax".to_string(), time_max.to_rfc3339());
+        self
+    }
+}
+
 impl EventRequestBuilderTrait for EventRequestBuilder {
     type EventRequestBuilder = EventRequestBuilder;
 
@@ -90,6 +116,17 @@ impl EventRequestBuilderTrait for EventRequestBuilder {
     fn single_events(mut self, single: bool) -> Self {
         self.params
             .insert("singleEvents".to_string(), single.to_string());
+        self
+    }
+
+    fn show_hidden_invitations(mut self, max: bool) -> Self {
+        self.params
+            .insert("showHiddenInvitations".to_string(), max.to_string());
+        self
+    }
+
+    fn query(mut self, query_str: &str) -> Self {
+        self.params.insert("q".to_string(), query_str.to_string());
         self
     }
 
