@@ -3,4 +3,6 @@ pub mod calendar;
 #[cfg(feature = "tasks")]
 pub mod tasks;
 
+pub mod auth;
+
 pub mod utils;

@@ -4,7 +4,7 @@ description = "A Rust library for interacting with Google Workspace APIs"
 repository = "https://github.com/BitsAndDroids/google-workspace-apis"
 keywords = ["google", "workspace", "apis", "rust", "library"]
 categories = ["web-programming", "api-bindings", "web-programming::http-client"]
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 license = "MIT"
 
@@ -16,5 +16,6 @@ tasks = []
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 schemars = { version = "1.0", features = ["uuid1", "chrono04"] }
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+anyhow = "1.0"
 chrono = { version = "0.4", features = ["serde", "alloc"] }
