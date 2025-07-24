@@ -1,23 +1,21 @@
 use reqwest::Error;
 use serde::de::DeserializeOwned;
 
-use crate::{
-    tasks::types::TaskLists,
-    utils::request::{PaginationRequestTrait, Request},
-};
+use crate::utils::request::{PaginationRequestTrait, Request};
+
+use super::tasklist::types::TaskLists;
 
 pub struct Uninitialized;
 pub struct TaskListMode;
 pub struct TasksMode;
 
-pub trait InitializedMode {}
+trait InitializedMode {}
 
 impl InitializedMode for TaskListMode {}
 impl InitializedMode for TasksMode {}
 
 pub trait TaskRequestBuilderTrait {
     type TaskRequestBuilder;
-    fn request(self) -> impl Future<Output = Result<Option<TaskLists>, Error>>;
 }
 
 pub struct TaskRequestBuilder<T = Uninitialized> {
@@ -85,7 +83,7 @@ impl<T: InitializedMode> PaginationRequestTrait for TaskRequestBuilder<T> {
         self.request
             .params
             .insert("pageToken".to_string(), token.to_string());
-        todo!()
+        self
     }
 }
 
@@ -100,14 +98,6 @@ impl TaskRequestBuilder<TasksMode> {
     where
         T: DeserializeOwned,
     {
-        self.make_request().await
-    }
-}
-
-impl TaskRequestBuilderTrait for TaskRequestBuilder<Uninitialized> {
-    type TaskRequestBuilder = TaskRequestBuilder<TaskListMode>;
-
-    async fn request(self) -> Result<Option<TaskLists>, Error> {
         self.make_request().await
     }
 }
