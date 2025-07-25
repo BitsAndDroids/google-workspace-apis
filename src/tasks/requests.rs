@@ -1,7 +1,10 @@
 use reqwest::Error;
 use serde::de::DeserializeOwned;
 
-use crate::utils::request::{PaginationRequestTrait, Request};
+use crate::{
+    auth::types::GoogleClient,
+    utils::request::{PaginationRequestTrait, Request},
+};
 
 use super::tasklist::types::TaskLists;
 
@@ -19,26 +22,30 @@ pub trait TaskRequestBuilderTrait {
 }
 
 pub struct TaskRequestBuilder<T = Uninitialized> {
-    pub request: Request,
+    request: Request,
     _mode: std::marker::PhantomData<T>,
 }
 
 impl TaskRequestBuilder<Uninitialized> {
-    pub fn new(client: reqwest::Client) -> Self {
+    pub fn new(client: &GoogleClient) -> Self {
         Self {
             request: Request::new(client),
             _mode: std::marker::PhantomData,
         }
     }
+    /// Get a list of task lists for the authenticated user.
+    /// This does not retrieve the actual tasks in the lists,
     pub fn get_task_lists(self) -> TaskRequestBuilder<TaskListMode> {
         let mut builder = TaskRequestBuilder {
             request: self.request,
             _mode: std::marker::PhantomData,
         };
         builder.request.url = "https://tasks.googleapis.com/tasks/v1/users/@me/lists".to_string();
+        builder.request.method = reqwest::Method::GET;
         builder
     }
 
+    /// Get a list of tasks from the specified task list.
     pub fn get_tasks(self, task_list_id: &str) -> TaskRequestBuilder<TasksMode> {
         let mut builder = TaskRequestBuilder {
             request: self.request,
@@ -46,6 +53,7 @@ impl TaskRequestBuilder<Uninitialized> {
         };
         builder.request.url =
             format!("https://tasks.googleapis.com/tasks/v1/lists/{task_list_id}/tasks");
+        builder.request.method = reqwest::Method::GET;
         builder
     }
 }
@@ -72,6 +80,7 @@ impl<T> TaskRequestBuilder<T> {
 }
 
 impl<T: InitializedMode> PaginationRequestTrait for TaskRequestBuilder<T> {
+    /// Sets the maximum number of results to return.
     fn max_results(mut self, max: i64) -> Self {
         self.request
             .params
@@ -79,6 +88,7 @@ impl<T: InitializedMode> PaginationRequestTrait for TaskRequestBuilder<T> {
         self
     }
 
+    /// Sets the page token for pagination. Works with `max_results`.
     fn page_token(mut self, token: &str) -> Self {
         self.request
             .params
@@ -88,12 +98,14 @@ impl<T: InitializedMode> PaginationRequestTrait for TaskRequestBuilder<T> {
 }
 
 impl TaskRequestBuilder<TaskListMode> {
+    /// Makes a request to retrieve the task lists.
     pub async fn request(self) -> Result<Option<TaskLists>, Error> {
         self.make_request().await
     }
 }
 
 impl TaskRequestBuilder<TasksMode> {
+    /// Makes a request to retrieve the tasks from the specified task list.
     pub async fn request<T>(self) -> Result<Option<T>, Error>
     where
         T: DeserializeOwned,
