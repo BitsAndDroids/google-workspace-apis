@@ -70,5 +70,38 @@ pub struct ClientCredentials {
 #[derive(Debug, Clone, Default)]
 pub struct GoogleClient {
     pub client_credentials: ClientCredentials,
+    pub access_token: Option<AccessToken>,
     pub client: reqwest::Client,
+}
+
+impl GoogleClient {
+    pub fn new(client_credentials: ClientCredentials, access_token: AccessToken) -> Self {
+        println!("Creating GoogleClient with provided credentials and access token");
+        println!(
+            "Client ID: {}, Access Token: {}",
+            client_credentials.client_id, access_token.access_token
+        );
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(
+            reqwest::header::AUTHORIZATION,
+            format!("Bearer {}", access_token.access_token)
+                .parse()
+                .unwrap(),
+        );
+        headers.insert(reqwest::header::ACCEPT, "application/json".parse().unwrap());
+        headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            "application/json".parse().unwrap(),
+        );
+        let client = reqwest::Client::builder()
+            .default_headers(headers)
+            .build()
+            .expect("Failed to build reqwest client");
+
+        Self {
+            client_credentials,
+            access_token: Some(access_token),
+            client,
+        }
+    }
 }

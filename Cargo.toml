@@ -4,7 +4,7 @@ description = "A Rust library for interacting with Google Workspace APIs"
 repository = "https://github.com/BitsAndDroids/google-workspace-apis"
 keywords = ["google", "workspace", "apis", "rust", "library"]
 categories = ["web-programming", "api-bindings", "web-programming::http-client"]
-version = "0.3.2"
+version = "0.3.3"
 edition = "2024"
 license = "MIT"
 
@@ -15,6 +15,10 @@ tasks = []
 [package.metadata.docs.rs]
 all-features = true
 
+[[example]]
+name = "axum_calendar_example"
+path = "examples/axum_calendar_example.rs"
+
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -23,3 +27,7 @@ schemars = { version = "1.0", features = ["uuid1", "chrono04"] }
 reqwest = { version = "0.12", features = ["json", "blocking"] }
 anyhow = "1.0"
 chrono = { version = "0.4", features = ["serde", "alloc"] }
+
+[dev-dependencies]
+axum = { version = "0.8.4", features = ["json", "macros", "tokio"] }
+tokio = { version = "1.44", features = ["rt-multi-thread"] }

@@ -2,17 +2,21 @@ use std::collections::HashMap;
 
 use chrono::DateTime;
 
-pub struct Request {
-    pub client: reqwest::Client,
-    pub url: String,
-    pub params: HashMap<String, String>,
+use crate::auth::types::GoogleClient;
+
+pub(crate) struct Request {
+    pub(crate) client: reqwest::Client,
+    pub(crate) url: String,
+    pub(crate) method: reqwest::Method,
+    pub(crate) params: HashMap<String, String>,
 }
 
 impl Request {
-    pub fn new(client: reqwest::Client) -> Self {
+    pub(crate) fn new(client: &GoogleClient) -> Self {
         Self {
-            client,
+            client: client.client.clone(),
             url: "".to_string(),
+            method: reqwest::Method::GET,
             params: HashMap::new(),
         }
     }
