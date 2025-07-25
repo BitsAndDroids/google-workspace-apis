@@ -23,3 +23,7 @@ schemars = { version = "1.0", features = ["uuid1", "chrono04"] }
 reqwest = { version = "0.12", features = ["json", "blocking"] }
 anyhow = "1.0"
 chrono = { version = "0.4", features = ["serde", "alloc"] }
+
+[dev-dependencies]
+axum = { version = "0.8.4", features = ["json", "macros", "tokio"] }
+tokio = { version = "1.44", features = ["rt-multi-thread"] }
