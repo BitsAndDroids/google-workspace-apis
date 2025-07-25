@@ -1,3 +1,18 @@
+/// This example demonstrates how to use the `google_workspace_apis` crate
+/// with Axum as a web server.
+/// In the Google cloud developer portal make sure to create a new application and add all the
+/// required API's.
+/// For more informatieon on how to set up the Google Cloud project visit [the getting started page of the Workspace API](https://developers.google.com/workspace/guides/get-started).
+///
+/// Make sure to do it in this order:
+/// - Start the server
+/// - Navigate to localhost:8080/api/v1/google/auth
+/// - Go to the url in your browser
+/// - Authorize the application
+/// - Your token is now stored in the GoogleClient in the server state
+/// - Navigate to localhost:8080/api/v1/google/calendar/events
+/// - See your upcomming events
+///  
 use google_workspace_apis::calendar::{events::requests::EventRequestBuilder, prelude::*};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
@@ -22,7 +37,7 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() {
-    println!("Hello, world!");
+    // We use this to reuse the same client over multiple requests
     let state = AppState {
         google_client: Arc::new(Mutex::new(None)),
     };
@@ -30,13 +45,9 @@ async fn main() {
         .route("/", axum::routing::get(|| async { "Hello, World!" }))
         .nest("/api/v1/google/", google_router())
         .with_state(state);
+
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
-    println!(
-        "Server running on http://{}",
-        listener.local_addr().unwrap()
-    );
-    let auth_url = get_auth_url_workspace().await;
-    println!("{auth_url}");
+
     axum::serve(listener, app).await.unwrap();
 }
 
@@ -73,6 +84,7 @@ pub async fn handle_google_oauth_redirect(
     let code = params.get("code").cloned().unwrap_or("".to_string());
 
     //Load this config from settings using cfg-toml for example
+    //Make sure to add these fields before running the example
     let google_cfg = Config {
         google_client_id: "",
         google_client_secret: "",
@@ -129,4 +141,3 @@ pub fn google_router() -> Router<AppState> {
             axum::routing::get(handle_google_oauth_redirect),
         )
 }
-

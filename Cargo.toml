@@ -15,6 +15,10 @@ tasks = []
 [package.metadata.docs.rs]
 all-features = true
 
+[[example]]
+name = "axum_calendar_example"
+path = "examples/axum_calendar_example.rs"
+
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
