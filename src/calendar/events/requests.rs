@@ -1,5 +1,6 @@
 use crate::{
     auth::types::GoogleClient,
+    calendar::events::types::{CreateEventRequest, EventDateTime},
     utils::request::{PaginationRequestTrait, Request, TimeRequestTrait},
 };
 
@@ -16,6 +17,9 @@ pub struct EventGetMode;
 /// Indicates that the request builder is initialized for retrieving a list of events.
 /// This struct determines which filters can be applied to the request.
 pub struct EventListMode;
+/// Indicates that the request builder is initialized for inserting events.
+/// This struct determines which filters can be applied to the request.
+pub struct EventInsertMode;
 
 pub trait EventListRequestBuilderTrait: PaginationRequestTrait + TimeRequestTrait {
     type EventRequestBuilder;
@@ -24,6 +28,7 @@ pub trait EventListRequestBuilderTrait: PaginationRequestTrait + TimeRequestTrai
 /// The main builder for making requests to the Google Calendar API to retrieve events.
 pub struct EventRequestBuilder<T = Uninitialized> {
     request: Request,
+    event: Option<CreateEventRequest>,
     _mode: std::marker::PhantomData<T>,
 }
 
@@ -31,6 +36,7 @@ impl EventRequestBuilder<Uninitialized> {
     pub fn new(client: &GoogleClient) -> Self {
         Self {
             request: Request::new(client),
+            event: None,
             _mode: std::marker::PhantomData,
         }
     }
@@ -63,6 +69,7 @@ impl EventRequestBuilder<Uninitialized> {
     pub fn get_events(self, calendar_id: &str) -> EventRequestBuilder<EventListMode> {
         let mut builder = EventRequestBuilder {
             request: self.request,
+            event: None,
             _mode: std::marker::PhantomData,
         };
         builder.request.url = "https://www.googleapis.com/calendar/v3/calendars/".to_string()
@@ -227,5 +234,19 @@ impl EventRequestBuilder<EventListMode> {
         };
 
         Ok(calendar_res)
+    }
+}
+
+impl EventRequestBuilder<EventListMode> {
+    pub async fn insert_event(
+        &mut self,
+        calendar_id: &str,
+        start: EventDateTime,
+        end: EventDateTime,
+    ) {
+        self.request.url =
+            format!("https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events",);
+        self.request.method = Method::POST;
+        self.event = Some(CreateEventRequest::new(start, end));
     }
 }
