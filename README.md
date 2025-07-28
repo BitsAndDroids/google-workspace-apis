@@ -24,6 +24,10 @@ The calls that are currently supported by this crate are:
 
 - Events (returns a list of events for a specified calendar)
 
+#### Insert
+
+- Insert event in specified calendar
+
 ### Tasks (WIP)
 
 For the api documentation, see the [Tasks API documentation](https://developers.google.com/workspace/tasks/reference/rest).
