@@ -459,12 +459,8 @@ pub struct EventPerson {
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, JsonSchema)]
 pub struct EventDateTime {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "crate::utils::deserialize::deserialize_nullable_string::deserialize"
-    )]
-    pub date: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
 
     #[serde(
         default,
@@ -474,13 +470,8 @@ pub struct EventDateTime {
     )]
     pub date_time: Option<chrono::DateTime<chrono::Utc>>,
 
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "crate::utils::deserialize::deserialize_nullable_string::deserialize",
-        rename = "timeZone"
-    )]
-    pub time_zone: String,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "timeZone")]
+    pub time_zone: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, JsonSchema)]
