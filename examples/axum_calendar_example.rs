@@ -13,7 +13,7 @@
 /// - Navigate to localhost:8080/api/v1/google/calendar/events
 /// - See your upcomming events
 ///  
-use google_workspace_apis::calendar::{events::requests::EventRequestBuilder, prelude::*};
+use google_workspace_apis::calendar::{events::requests::CalendarEventsClient, prelude::*};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
@@ -118,7 +118,7 @@ async fn get_calendar_events(State(state): State<AppState>) -> Json<Vec<Event>> 
     // Create the request builder and immediately drop the lock
     let google_client_guard = state.google_client.lock().await;
     let client = google_client_guard.as_ref().unwrap();
-    let events = EventRequestBuilder::new(client)
+    let events = CalendarEventsClient::new(client)
         .get_events("primary")
         .single_events(true)
         .max_results(10)

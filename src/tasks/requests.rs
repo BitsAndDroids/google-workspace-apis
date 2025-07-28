@@ -21,12 +21,12 @@ pub trait TaskRequestBuilderTrait {
     type TaskRequestBuilder;
 }
 
-pub struct TaskRequestBuilder<T = Uninitialized> {
+pub struct TasksClient<T = Uninitialized> {
     request: Request,
     _mode: std::marker::PhantomData<T>,
 }
 
-impl TaskRequestBuilder<Uninitialized> {
+impl TasksClient<Uninitialized> {
     pub fn new(client: &GoogleClient) -> Self {
         Self {
             request: Request::new(client),
@@ -35,8 +35,8 @@ impl TaskRequestBuilder<Uninitialized> {
     }
     /// Get a list of task lists for the authenticated user.
     /// This does not retrieve the actual tasks in the lists,
-    pub fn get_task_lists(self) -> TaskRequestBuilder<TaskListMode> {
-        let mut builder = TaskRequestBuilder {
+    pub fn get_task_lists(self) -> TasksClient<TaskListMode> {
+        let mut builder = TasksClient {
             request: self.request,
             _mode: std::marker::PhantomData,
         };
@@ -46,8 +46,8 @@ impl TaskRequestBuilder<Uninitialized> {
     }
 
     /// Get a list of tasks from the specified task list.
-    pub fn get_tasks(self, task_list_id: &str) -> TaskRequestBuilder<TasksMode> {
-        let mut builder = TaskRequestBuilder {
+    pub fn get_tasks(self, task_list_id: &str) -> TasksClient<TasksMode> {
+        let mut builder = TasksClient {
             request: self.request,
             _mode: std::marker::PhantomData,
         };
@@ -58,7 +58,7 @@ impl TaskRequestBuilder<Uninitialized> {
     }
 }
 
-impl<T> TaskRequestBuilder<T> {
+impl<T> TasksClient<T> {
     async fn make_request<R>(&self) -> Result<Option<R>, Error>
     where
         R: DeserializeOwned,
@@ -79,7 +79,7 @@ impl<T> TaskRequestBuilder<T> {
     }
 }
 
-impl<T: InitializedMode> PaginationRequestTrait for TaskRequestBuilder<T> {
+impl<T: InitializedMode> PaginationRequestTrait for TasksClient<T> {
     /// Sets the maximum number of results to return.
     fn max_results(mut self, max: i64) -> Self {
         self.request
@@ -97,14 +97,14 @@ impl<T: InitializedMode> PaginationRequestTrait for TaskRequestBuilder<T> {
     }
 }
 
-impl TaskRequestBuilder<TaskListMode> {
+impl TasksClient<TaskListMode> {
     /// Makes a request to retrieve the task lists.
     pub async fn request(self) -> Result<Option<TaskLists>, Error> {
         self.make_request().await
     }
 }
 
-impl TaskRequestBuilder<TasksMode> {
+impl TasksClient<TasksMode> {
     /// Makes a request to retrieve the tasks from the specified task list.
     pub async fn request<T>(self) -> Result<Option<T>, Error>
     where

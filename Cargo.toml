@@ -4,7 +4,7 @@ description = "A Rust library for interacting with Google Workspace APIs"
 repository = "https://github.com/BitsAndDroids/google-workspace-apis"
 keywords = ["google", "workspace", "apis", "rust", "library"]
 categories = ["web-programming", "api-bindings", "web-programming::http-client"]
-version = "0.3.3"
+version = "0.4.0"
 edition = "2024"
 license = "MIT"
 
