@@ -1,3 +1,4 @@
+![Crates.io Version](https://img.shields.io/crates/v/google-workspace-apis)
 # Google workspace API client
 
 This crate is an unofficial opinionated library that unifies the Google Workspace API clients.
