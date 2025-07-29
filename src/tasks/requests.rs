@@ -147,12 +147,32 @@ impl TasksClient<TaskListMode> {
     }
 }
 
+/// A client for interacting with the Google Tasks API in retrieval mode.
+///
+/// This client allows querying task lists with various filtering options such as
+/// completion status, due dates, and visibility settings.
+///
+/// # Example
+/// ```
+/// let client = TasksClient::new(hub, "taskListId");
+/// let tasks = client.show_completed(true).get_due_min(some_date).request().await?;
+/// ```
 impl TasksClient<TasksMode> {
     /// Makes a request to retrieve the tasks from the specified task list.
+    ///
+    /// # Returns
+    /// * `Result<Option<Tasks>, Error>` - A result containing the tasks if successful,
+    ///   or an error if the request failed. Returns `None` if no tasks were found.
     pub async fn request(self) -> Result<Option<Tasks>, Error> {
         self.make_request().await
     }
-
+    /// Filter tasks by completion date to include only tasks completed before the specified date.
+    ///
+    /// # Arguments
+    /// * `completed_max` - The upper bound (exclusive) for a task's completion date to filter by
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
     pub fn get_completed_max(mut self, completed_max: chrono::DateTime<chrono::Utc>) -> Self {
         self.request
             .params
@@ -160,6 +180,13 @@ impl TasksClient<TasksMode> {
         self
     }
 
+    /// Filter tasks by completion date to include only tasks completed after the specified date.
+    ///
+    /// # Arguments
+    /// * `completed_min` - The lower bound (inclusive) for a task's completion date to filter by
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
     pub fn get_completed_min(mut self, completed_min: chrono::DateTime<chrono::Utc>) -> Self {
         self.request
             .params
@@ -167,6 +194,13 @@ impl TasksClient<TasksMode> {
         self
     }
 
+    /// Filter tasks by due date to include only tasks due before the specified date.
+    ///
+    /// # Arguments
+    /// * `due_max` - The upper bound (exclusive) for a task's due date to filter by
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
     pub fn get_due_max(mut self, due_max: chrono::DateTime<chrono::Utc>) -> Self {
         self.request
             .params
@@ -174,6 +208,13 @@ impl TasksClient<TasksMode> {
         self
     }
 
+    /// Filter tasks by due date to include only tasks due after the specified date.
+    ///
+    /// # Arguments
+    /// * `due_min` - The lower bound (inclusive) for a task's due date to filter by
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
     pub fn get_due_min(mut self, due_min: chrono::DateTime<chrono::Utc>) -> Self {
         self.request
             .params
@@ -181,6 +222,13 @@ impl TasksClient<TasksMode> {
         self
     }
 
+    /// Control whether completed tasks are included in the result.
+    ///
+    /// # Arguments
+    /// * `show_completed` - If true, completed tasks are included in the result
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
     pub fn show_completed(mut self, show_completed: bool) -> Self {
         self.request
             .params
@@ -188,6 +236,13 @@ impl TasksClient<TasksMode> {
         self
     }
 
+    /// Control whether deleted tasks are included in the result.
+    ///
+    /// # Arguments
+    /// * `show_deleted` - If true, deleted tasks are included in the result
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
     pub fn show_deleted(mut self, show_due: bool) -> Self {
         self.request
             .params
@@ -195,6 +250,13 @@ impl TasksClient<TasksMode> {
         self
     }
 
+    /// Control whether hidden tasks are included in the result.
+    ///
+    /// # Arguments
+    /// * `show_hidden` - If true, hidden tasks are included in the result
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
     pub fn show_hidden(mut self, show_hidden: bool) -> Self {
         self.request
             .params
@@ -202,6 +264,13 @@ impl TasksClient<TasksMode> {
         self
     }
 
+    /// Filter tasks to include only those updated after the specified time.
+    ///
+    /// # Arguments
+    /// * `updated_min` - The minimum last updated date (inclusive) to filter by
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
     pub fn get_updated_min(mut self, updated_min: chrono::DateTime<chrono::Utc>) -> Self {
         self.request
             .params
@@ -209,6 +278,13 @@ impl TasksClient<TasksMode> {
         self
     }
 
+    /// Control whether assigned tasks are included in the result.
+    ///
+    /// # Arguments
+    /// * `show_assigned` - If true, assigned tasks are included in the result
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
     pub fn show_assigned(mut self, show_assigned: bool) -> Self {
         self.request
             .params
@@ -217,12 +293,33 @@ impl TasksClient<TasksMode> {
     }
 }
 
+/// A client for interacting with the Google Tasks API in task insertion mode.
+///
+/// This client allows creating new tasks with various properties such as
+/// title, notes, due dates, and hierarchical placement.
+///
+/// # Example
+/// ```
+/// let client = TasksClient::new(hub, "taskListId");
+/// let task = client.set_task_title("New Task").set_task_notes("Details").request().await?;
+/// ```
 impl TasksClient<TaskInsertMode> {
-    /// Makes a request to retrieve the tasks from the specified task list.
+    /// Makes a request to create a task with the specified properties.
+    ///
+    /// # Returns
+    /// * `Result<Option<Tasks>, Error>` - A result containing the created task if successful,
+    ///   or an error if the request failed.
     pub async fn request(self) -> Result<Option<Tasks>, Error> {
         self.make_request().await
     }
 
+    /// Sets the parent task for this task, establishing a hierarchical relationship.
+    ///
+    /// # Arguments
+    /// * `parent_id` - The ID of the parent task
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
     pub fn set_parent(mut self, parent_id: &str) -> Self {
         self.request
             .params
@@ -230,6 +327,13 @@ impl TasksClient<TaskInsertMode> {
         self
     }
 
+    /// Sets the previous sibling task for this task, establishing the order of tasks.
+    ///
+    /// # Arguments
+    /// * `previous_id` - The ID of the previous task in the sequence
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
     pub fn set_previous(mut self, previous_id: &str) -> Self {
         self.request
             .params
@@ -237,11 +341,28 @@ impl TasksClient<TaskInsertMode> {
         self
     }
 
+    /// Sets the complete task object to be inserted.
+    ///
+    /// # Arguments
+    /// * `task` - The Task object containing all properties to be set
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
     pub fn set_task(mut self, task: Task) -> Self {
         self.task = Some(task);
         self
     }
 
+    /// Sets the title of the task to be created.
+    ///
+    /// # Arguments
+    /// * `title` - The title for the task
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
+    ///
+    /// # Panics
+    /// * If called before initializing the task
     pub fn set_task_title(mut self, title: &str) -> Self {
         match self.task {
             Some(ref mut task) => task.title = title.to_string(),
@@ -250,6 +371,16 @@ impl TasksClient<TaskInsertMode> {
         self
     }
 
+    /// Sets the ETag of the task to be created.
+    ///
+    /// # Arguments
+    /// * `etag` - The ETag for the task
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
+    ///
+    /// # Panics
+    /// * If called before initializing the task
     pub fn set_task_etag(mut self, etag: &str) -> Self {
         match self.task {
             Some(ref mut task) => task.etag = etag.to_string(),
@@ -258,6 +389,16 @@ impl TasksClient<TaskInsertMode> {
         self
     }
 
+    /// Sets the notes describing the task.
+    ///
+    /// # Arguments
+    /// * `notes` - The notes for the task (max 8192 characters)
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
+    ///
+    /// # Panics
+    /// * If called before initializing the task
     pub fn set_task_notes(mut self, notes: &str) -> Self {
         match self.task {
             Some(ref mut task) => task.notes = notes.to_string(),
@@ -266,6 +407,16 @@ impl TasksClient<TaskInsertMode> {
         self
     }
 
+    /// Sets the due date of the task.
+    ///
+    /// # Arguments
+    /// * `due` - The due date for the task (as a DateTime)
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
+    ///
+    /// # Panics
+    /// * If called before initializing the task
     pub fn set_task_due(mut self, due: chrono::DateTime<chrono::Utc>) -> Self {
         match self.task {
             Some(ref mut task) => task.due = Some(due),
@@ -274,6 +425,16 @@ impl TasksClient<TaskInsertMode> {
         self
     }
 
+    /// Sets the completion date of the task.
+    ///
+    /// # Arguments
+    /// * `completed` - The datetime when the task was completed
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
+    ///
+    /// # Panics
+    /// * If called before initializing the task
     pub fn set_task_completed(mut self, completed: chrono::DateTime<chrono::Utc>) -> Self {
         match self.task {
             Some(ref mut task) => task.completed = Some(completed),
@@ -282,6 +443,16 @@ impl TasksClient<TaskInsertMode> {
         self
     }
 
+    /// Sets the hidden status of the task.
+    ///
+    /// # Arguments
+    /// * `hidden` - If true, marks the task as hidden
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
+    ///
+    /// # Panics
+    /// * If called before initializing the task
     pub fn set_task_hidden(mut self, hidden: bool) -> Self {
         match self.task {
             Some(ref mut task) => task.hidden = hidden,
@@ -290,6 +461,16 @@ impl TasksClient<TaskInsertMode> {
         self
     }
 
+    /// Sets the links associated with the task.
+    ///
+    /// # Arguments
+    /// * `links` - A vector of TaskLink objects to associate with the task
+    ///
+    /// # Returns
+    /// * `Self` - Returns the client for method chaining
+    ///
+    /// # Panics
+    /// * If called before initializing the task
     pub fn set_task_links(mut self, links: Vec<TaskLink>) -> Self {
         match self.task {
             Some(ref mut task) => task.links = links,
