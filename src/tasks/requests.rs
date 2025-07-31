@@ -87,7 +87,7 @@ impl TasksClient<Uninitialized> {
             _mode: std::marker::PhantomData,
         };
         builder.request.url =
-            format!("https://tasks.googleapis.com/tasks/v1/lists/{task_list_id}/toggle");
+            format!("https://tasks.googleapis.com/tasks/v1/lists/{task_list_id}/tasks/{task_id}");
         builder.request.method = reqwest::Method::PATCH;
         let mut params: HashMap<String, String> = HashMap::new();
         params.insert("task".to_string(), task_id.to_string());
@@ -176,7 +176,7 @@ impl TasksClient<TaskListMode> {
 ///
 /// # Example
 /// ```
-/// let client = TasksClient::new(hub, "taskListId");
+/// let client = TasksClient::new(client);
 /// let tasks = client.show_completed(true).get_due_min(some_date).request().await?;
 /// ```
 impl TasksClient<TasksMode> {
@@ -322,7 +322,7 @@ impl TasksClient<TasksMode> {
 ///
 /// # Example
 /// ```
-/// let client = TasksClient::new(hub, "taskListId");
+/// let client = TasksClient::new(client);
 /// let task = client.set_task_title("New Task").set_task_notes("Details").request().await?;
 /// ```
 impl TasksClient<TaskInsertMode> {
