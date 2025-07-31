@@ -18,6 +18,7 @@ pub struct Uninitialized;
 pub struct TaskListMode;
 pub struct TaskInsertMode;
 pub struct TasksMode;
+pub struct TaskPatchMode;
 
 trait InitializedGetMode {}
 
@@ -80,7 +81,7 @@ impl TasksClient<Uninitialized> {
         builder
     }
 
-    pub fn complete_task(self, task_id: &str, task_list_id: &str) -> TasksClient<TasksMode> {
+    pub fn complete_task(self, task_id: &str, task_list_id: &str) -> TasksClient<TaskPatchMode> {
         let mut builder = TasksClient {
             request: self.request,
             task: None,
@@ -499,5 +500,16 @@ impl TasksClient<TaskInsertMode> {
             None => panic!("Event not initialized for insertion"),
         }
         self
+    }
+}
+
+impl TasksClient<TaskPatchMode> {
+    /// Makes a request to update the task with the specified properties.
+    ///
+    /// # Returns
+    /// * `Result<Option<Tasks>, Error>` - A result containing the updated task if successful,
+    ///   or an error if the request failed.
+    pub async fn request(self) -> Result<Option<Task>, Error> {
+        self.make_request().await
     }
 }
