@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::{Error, anyhow};
 use reqwest::Method;
 use serde::de::DeserializeOwned;
@@ -75,6 +77,26 @@ impl TasksClient<Uninitialized> {
         builder.request.url =
             format!("https://tasks.googleapis.com/tasks/v1/lists/{task_list_id}/tasks");
         builder.request.method = reqwest::Method::POST;
+        builder
+    }
+
+    pub fn complete_task(self, task_id: &str, task_list_id: &str) -> TasksClient<TasksMode> {
+        let mut builder = TasksClient {
+            request: self.request,
+            task: None,
+            _mode: std::marker::PhantomData,
+        };
+        builder.request.url =
+            format!("https://tasks.googleapis.com/tasks/v1/lists/{task_list_id}/toggle");
+        builder.request.method = reqwest::Method::PATCH;
+        let mut params: HashMap<String, String> = HashMap::new();
+        params.insert("task".to_string(), task_id.to_string());
+        params.insert("taskList".to_string(), task_list_id.to_string());
+        builder.request.params = params;
+        let payload = serde_json::json!({
+            "status": "completed"
+        });
+        builder.request.body = Some(serde_json::to_string(&payload).unwrap());
         builder
     }
 }
