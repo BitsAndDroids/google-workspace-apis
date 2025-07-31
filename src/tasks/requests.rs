@@ -140,6 +140,23 @@ impl<T> TasksClient<T> {
                     Ok(None)
                 }
             }
+
+            Method::PATCH => {
+                let res = self
+                    .request
+                    .client
+                    .patch(&self.request.url)
+                    .body(self.request.body.clone().unwrap_or_default())
+                    .query(&self.request.params)
+                    .send()
+                    .await?;
+
+                if res.status().is_success() {
+                    Ok(Some(res.json().await?))
+                } else {
+                    Ok(None)
+                }
+            }
             _ => Err(anyhow!("Unsupported HTTP method")),
         }
     }
