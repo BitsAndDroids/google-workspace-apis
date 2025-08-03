@@ -37,6 +37,26 @@ pub struct AccessToken {
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct InnerToken {
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "crate::utils::deserialize::deserialize_nullable_string::deserialize"
+    )]
+    pub access_token: String,
+
+    #[serde(default)]
+    pub expires_on: chrono::DateTime<chrono::Utc>,
+
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "crate::utils::deserialize::deserialize_nullable_string::deserialize"
+    )]
+    pub refresh_token: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct ClientCredentials {
     #[serde(
         default,
@@ -70,12 +90,12 @@ pub struct ClientCredentials {
 #[derive(Debug, Clone, Default)]
 pub struct GoogleClient {
     pub client_credentials: ClientCredentials,
-    pub access_token: Option<AccessToken>,
+    pub access_token: Option<InnerToken>,
     pub client: reqwest::Client,
 }
 
 impl GoogleClient {
-    pub fn new(client_credentials: ClientCredentials, access_token: AccessToken) -> Self {
+    pub fn new(client_credentials: ClientCredentials, access_token: InnerToken) -> Self {
         println!("Creating GoogleClient with provided credentials and access token");
         println!(
             "Client ID: {}, Access Token: {}",
