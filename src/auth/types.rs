@@ -37,7 +37,7 @@ pub struct AccessToken {
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
-pub struct InnerToken {
+pub struct ClientTokenData {
     #[serde(
         default,
         skip_serializing_if = "String::is_empty",
@@ -90,12 +90,12 @@ pub struct ClientCredentials {
 #[derive(Debug, Clone, Default)]
 pub struct GoogleClient {
     pub client_credentials: ClientCredentials,
-    pub access_token: Option<InnerToken>,
+    pub access_token: Option<ClientTokenData>,
     pub client: reqwest::Client,
 }
 
 impl GoogleClient {
-    pub fn new(client_credentials: ClientCredentials, access_token: InnerToken) -> Self {
+    pub fn new(client_credentials: ClientCredentials, access_token: ClientTokenData) -> Self {
         println!("Creating GoogleClient with provided credentials and access token");
         println!(
             "Client ID: {}, Access Token: {}",
