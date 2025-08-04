@@ -107,17 +107,7 @@ pub async fn handle_google_oauth_redirect(
         refresh_token: access_token.refresh_token.clone(),
     };
 
-    let expires_on = chrono::Utc::now()
-        .checked_add_signed(chrono::Duration::seconds(access_token.expires_in))
-        .unwrap_or_else(|| chrono::Utc::now());
-
-    let inner_token = google_workspace_apis::auth::types::ClientTokenData {
-        access_token: access_token.access_token,
-        expires_on: expires_on,
-        refresh_token: access_token.refresh_token,
-    };
-
-    let new_client = GoogleClient::new(client_credentials, inner_token);
+    let new_client = GoogleClient::new(client_credentials, access_token);
     let mut guard = state.google_client.lock().await;
     *guard = Some(new_client);
     println!("Google client initialized successfully");

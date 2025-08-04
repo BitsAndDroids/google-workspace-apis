@@ -94,8 +94,18 @@ pub struct GoogleClient {
     pub client: reqwest::Client,
 }
 
+impl From<AccessToken> for ClientTokenData {
+    fn from(token: AccessToken) -> Self {
+        Self {
+            access_token: token.access_token,
+            expires_on: chrono::Utc::now() + chrono::Duration::seconds(token.expires_in),
+            refresh_token: token.refresh_token,
+        }
+    }
+}
+
 impl GoogleClient {
-    pub fn new(client_credentials: ClientCredentials, access_token: ClientTokenData) -> Self {
+    pub fn new(client_credentials: ClientCredentials, access_token: AccessToken) -> Self {
         println!("Creating GoogleClient with provided credentials and access token");
         println!(
             "Client ID: {}, Access Token: {}",
@@ -120,7 +130,7 @@ impl GoogleClient {
 
         Self {
             client_credentials,
-            access_token: Some(access_token),
+            access_token: Some(access_token.into()),
             client,
         }
     }
