@@ -109,12 +109,11 @@ impl From<AccessToken> for ClientTokenData {
 }
 
 impl GoogleClient {
-    pub fn new(client_credentials: ClientCredentials, access_token: AccessToken) -> Self {
-        println!("Creating GoogleClient with provided credentials and access token");
-        println!(
-            "Client ID: {}, Access Token: {}",
-            client_credentials.client_id, access_token.access_token
-        );
+    pub fn new(
+        client_credentials: ClientCredentials,
+        access_token: AccessToken,
+        auto_refresh_token: bool,
+    ) -> Self {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert(
             reqwest::header::AUTHORIZATION,
@@ -136,7 +135,7 @@ impl GoogleClient {
             client_credentials,
             access_token: Some(access_token.into()),
             req_client: client,
-            auto_refresh_token: false,
+            auto_refresh_token,
         }
     }
 
@@ -152,6 +151,10 @@ impl GoogleClient {
 
     pub fn enable_auto_refresh(&mut self) {
         self.auto_refresh_token = true;
+    }
+
+    pub fn disable_auto_refresh(&mut self) {
+        self.auto_refresh_token = false;
     }
 
     pub fn is_access_token_valid(&self) -> bool {

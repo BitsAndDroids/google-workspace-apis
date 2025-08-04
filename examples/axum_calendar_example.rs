@@ -18,8 +18,8 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
 use axum::{
-    Json, Router,
     extract::{Query, State},
+    Json, Router,
 };
 use google_workspace_apis::{
     auth::{
@@ -107,7 +107,7 @@ pub async fn handle_google_oauth_redirect(
         refresh_token: access_token.refresh_token.clone(),
     };
 
-    let new_client = GoogleClient::new(client_credentials, access_token);
+    let new_client = GoogleClient::new(client_credentials, access_token, true);
     let mut guard = state.google_client.lock().await;
     *guard = Some(new_client);
     println!("Google client initialized successfully");
