@@ -2,15 +2,7 @@
 name = "google-workspace-apis"
 description = "A Rust library for interacting with Google Workspace APIs"
 repository = "https://github.com/BitsAndDroids/google-workspace-apis"
-keywords = [
-  "google",
-  "workspace",
-  "apis",
-  "rust",
-  "library",
-  "Google tasks",
-  "Google calendar",
-]
+keywords = ["google", "workspace", "apis", "tasks", "calendar"]
 categories = ["web-programming", "api-bindings", "web-programming::http-client"]
 version = "0.6.0"
 edition = "2024"
