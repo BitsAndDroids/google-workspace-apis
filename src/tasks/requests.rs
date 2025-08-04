@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::{Error, anyhow};
 use reqwest::Method;
 use serde::de::DeserializeOwned;
@@ -16,6 +18,7 @@ pub struct Uninitialized;
 pub struct TaskListMode;
 pub struct TaskInsertMode;
 pub struct TasksMode;
+pub struct TaskPatchMode;
 
 trait InitializedGetMode {}
 
@@ -77,6 +80,26 @@ impl TasksClient<Uninitialized> {
         builder.request.method = reqwest::Method::POST;
         builder
     }
+
+    pub fn complete_task(self, task_id: &str, task_list_id: &str) -> TasksClient<TaskPatchMode> {
+        let mut builder = TasksClient {
+            request: self.request,
+            task: None,
+            _mode: std::marker::PhantomData,
+        };
+        builder.request.url =
+            format!("https://tasks.googleapis.com/tasks/v1/lists/{task_list_id}/tasks/{task_id}");
+        builder.request.method = reqwest::Method::PATCH;
+        let mut params: HashMap<String, String> = HashMap::new();
+        params.insert("task".to_string(), task_id.to_string());
+        params.insert("taskList".to_string(), task_list_id.to_string());
+        builder.request.params = params;
+        let payload = serde_json::json!({
+            "status": "completed"
+        });
+        builder.request.body = Some(serde_json::to_string(&payload).unwrap());
+        builder
+    }
 }
 
 impl<T> TasksClient<T> {
@@ -107,6 +130,23 @@ impl<T> TasksClient<T> {
                     .client
                     .post(&self.request.url)
                     .body(serde_json::to_string(&self.task).unwrap())
+                    .query(&self.request.params)
+                    .send()
+                    .await?;
+
+                if res.status().is_success() {
+                    Ok(Some(res.json().await?))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            Method::PATCH => {
+                let res = self
+                    .request
+                    .client
+                    .patch(&self.request.url)
+                    .body(self.request.body.clone().unwrap_or_default())
                     .query(&self.request.params)
                     .send()
                     .await?;
@@ -154,7 +194,7 @@ impl TasksClient<TaskListMode> {
 ///
 /// # Example
 /// ```
-/// let client = TasksClient::new(hub, "taskListId");
+/// let client = TasksClient::new(client);
 /// let tasks = client.show_completed(true).get_due_min(some_date).request().await?;
 /// ```
 impl TasksClient<TasksMode> {
@@ -300,7 +340,7 @@ impl TasksClient<TasksMode> {
 ///
 /// # Example
 /// ```
-/// let client = TasksClient::new(hub, "taskListId");
+/// let client = TasksClient::new(client);
 /// let task = client.set_task_title("New Task").set_task_notes("Details").request().await?;
 /// ```
 impl TasksClient<TaskInsertMode> {
@@ -477,5 +517,16 @@ impl TasksClient<TaskInsertMode> {
             None => panic!("Event not initialized for insertion"),
         }
         self
+    }
+}
+
+impl TasksClient<TaskPatchMode> {
+    /// Makes a request to update the task with the specified properties.
+    ///
+    /// # Returns
+    /// * `Result<Option<Tasks>, Error>` - A result containing the updated task if successful,
+    ///   or an error if the request failed.
+    pub async fn request(self) -> Result<Option<Task>, Error> {
+        self.make_request().await
     }
 }

@@ -9,6 +9,7 @@ pub(crate) struct Request {
     pub(crate) url: String,
     pub(crate) method: reqwest::Method,
     pub(crate) params: HashMap<String, String>,
+    pub(crate) body: Option<String>,
 }
 
 impl Request {
@@ -18,6 +19,7 @@ impl Request {
             url: "".to_string(),
             method: reqwest::Method::GET,
             params: HashMap::new(),
+            body: None,
         }
     }
 }

@@ -37,6 +37,26 @@ pub struct AccessToken {
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct ClientTokenData {
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "crate::utils::deserialize::deserialize_nullable_string::deserialize"
+    )]
+    pub access_token: String,
+
+    #[serde(default)]
+    pub expires_on: chrono::DateTime<chrono::Utc>,
+
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "crate::utils::deserialize::deserialize_nullable_string::deserialize"
+    )]
+    pub refresh_token: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct ClientCredentials {
     #[serde(
         default,
@@ -70,8 +90,18 @@ pub struct ClientCredentials {
 #[derive(Debug, Clone, Default)]
 pub struct GoogleClient {
     pub client_credentials: ClientCredentials,
-    pub access_token: Option<AccessToken>,
+    pub access_token: Option<ClientTokenData>,
     pub client: reqwest::Client,
+}
+
+impl From<AccessToken> for ClientTokenData {
+    fn from(token: AccessToken) -> Self {
+        Self {
+            access_token: token.access_token,
+            expires_on: chrono::Utc::now() + chrono::Duration::seconds(token.expires_in),
+            refresh_token: token.refresh_token,
+        }
+    }
 }
 
 impl GoogleClient {
@@ -100,7 +130,7 @@ impl GoogleClient {
 
         Self {
             client_credentials,
-            access_token: Some(access_token),
+            access_token: Some(access_token.into()),
             client,
         }
     }
