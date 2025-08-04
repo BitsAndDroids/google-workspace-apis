@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{Error, anyhow};
+use anyhow::{anyhow, Error};
 use reqwest::Method;
 use serde::de::DeserializeOwned;
 
@@ -103,15 +103,17 @@ impl TasksClient<Uninitialized> {
 }
 
 impl<T> TasksClient<T> {
-    async fn make_request<R>(&self) -> Result<Option<R>, Error>
+    async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
     where
         R: DeserializeOwned,
     {
+        self.request.client.refresh_acces_token_check().await?;
         match self.request.method {
             Method::GET => {
                 let res = self
                     .request
                     .client
+                    .req_client
                     .get(&self.request.url)
                     .query(&self.request.params)
                     .send()
@@ -128,6 +130,7 @@ impl<T> TasksClient<T> {
                 let res = self
                     .request
                     .client
+                    .req_client
                     .post(&self.request.url)
                     .body(serde_json::to_string(&self.task).unwrap())
                     .query(&self.request.params)
@@ -145,6 +148,7 @@ impl<T> TasksClient<T> {
                 let res = self
                     .request
                     .client
+                    .req_client
                     .patch(&self.request.url)
                     .body(self.request.body.clone().unwrap_or_default())
                     .query(&self.request.params)
@@ -182,7 +186,7 @@ impl<T: InitializedGetMode> PaginationRequestTrait for TasksClient<T> {
 
 impl TasksClient<TaskListMode> {
     /// Makes a request to retrieve the task lists.
-    pub async fn request(self) -> Result<Option<TaskLists>, Error> {
+    pub async fn request(&mut self) -> Result<Option<TaskLists>, Error> {
         self.make_request().await
     }
 }
@@ -203,7 +207,7 @@ impl TasksClient<TasksMode> {
     /// # Returns
     /// * `Result<Option<Tasks>, Error>` - A result containing the tasks if successful,
     ///   or an error if the request failed. Returns `None` if no tasks were found.
-    pub async fn request(self) -> Result<Option<Tasks>, Error> {
+    pub async fn request(&mut self) -> Result<Option<Tasks>, Error> {
         self.make_request().await
     }
     /// Filter tasks by completion date to include only tasks completed before the specified date.
@@ -349,7 +353,7 @@ impl TasksClient<TaskInsertMode> {
     /// # Returns
     /// * `Result<Option<Tasks>, Error>` - A result containing the created task if successful,
     ///   or an error if the request failed.
-    pub async fn request(self) -> Result<Option<Tasks>, Error> {
+    pub async fn request(&mut self) -> Result<Option<Tasks>, Error> {
         self.make_request().await
     }
 
@@ -526,7 +530,7 @@ impl TasksClient<TaskPatchMode> {
     /// # Returns
     /// * `Result<Option<Tasks>, Error>` - A result containing the updated task if successful,
     ///   or an error if the request failed.
-    pub async fn request(self) -> Result<Option<Task>, Error> {
+    pub async fn request(&mut self) -> Result<Option<Task>, Error> {
         self.make_request().await
     }
 }

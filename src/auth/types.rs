@@ -1,5 +1,8 @@
+use anyhow::{anyhow, Error};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use super::refresh_acces_token;
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct AccessToken {
@@ -91,7 +94,8 @@ pub struct ClientCredentials {
 pub struct GoogleClient {
     pub client_credentials: ClientCredentials,
     pub access_token: Option<ClientTokenData>,
-    pub client: reqwest::Client,
+    pub req_client: reqwest::Client,
+    pub auto_refresh_token: bool,
 }
 
 impl From<AccessToken> for ClientTokenData {
@@ -131,7 +135,35 @@ impl GoogleClient {
         Self {
             client_credentials,
             access_token: Some(access_token.into()),
-            client,
+            req_client: client,
+            auto_refresh_token: false,
         }
+    }
+
+    pub async fn refresh_acces_token_check(&mut self) -> Result<(), Error> {
+        if self.auto_refresh_token && !self.is_access_token_valid() {
+            match self.update_access_token().await {
+                Ok(_) => return Ok(()),
+                Err(e) => return Err(anyhow!(e)),
+            }
+        }
+        Ok(())
+    }
+
+    pub fn enable_auto_refresh(&mut self) {
+        self.auto_refresh_token = true;
+    }
+
+    pub fn is_access_token_valid(&self) -> bool {
+        if let Some(token_data) = &self.access_token {
+            return chrono::Utc::now() < token_data.expires_on;
+        }
+        false
+    }
+
+    pub async fn update_access_token(&mut self) -> Result<(), Error> {
+        let new_token = refresh_acces_token(&self.client_credentials).await.unwrap();
+        self.access_token = Some(new_token.into());
+        Ok(())
     }
 }

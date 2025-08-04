@@ -4,7 +4,7 @@ use crate::{
     utils::request::{PaginationRequestTrait, Request, TimeRequestTrait},
 };
 
-use anyhow::{Error, anyhow};
+use anyhow::{anyhow, Error};
 use chrono::DateTime;
 use reqwest::Method;
 use serde::de::DeserializeOwned;
@@ -243,21 +243,23 @@ impl CalendarEventsClient<EventListMode> {
     }
 
     /// Returns a request result for getting a list of events from the specified calendar.
-    pub async fn request(self) -> Result<Option<EventList>, Error> {
+    pub async fn request(&mut self) -> Result<Option<EventList>, Error> {
         self.make_request().await
     }
 }
 
 impl<T> CalendarEventsClient<T> {
-    async fn make_request<R>(&self) -> Result<Option<R>, Error>
+    async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
     where
         R: DeserializeOwned,
     {
+        self.request.client.refresh_acces_token_check().await?;
         match self.request.method {
             Method::GET => {
                 let res = self
                     .request
                     .client
+                    .req_client
                     .get(&self.request.url)
                     .query(&self.request.params)
                     .send()
@@ -274,6 +276,7 @@ impl<T> CalendarEventsClient<T> {
                 let res = self
                     .request
                     .client
+                    .req_client
                     .post(&self.request.url)
                     .body(serde_json::to_string(&self.event).unwrap())
                     .query(&self.request.params)
@@ -526,7 +529,7 @@ impl CalendarEventsClient<EventInsertMode> {
     /// * `Ok(Some(Event))` - The created event if successful
     /// * `Ok(None)` - If the request was unsuccessful
     /// * `Err` - If there was an error making the request
-    pub async fn request(self) -> Result<Option<Event>, Error> {
+    pub async fn request(&mut self) -> Result<Option<Event>, Error> {
         self.make_request().await
     }
 }

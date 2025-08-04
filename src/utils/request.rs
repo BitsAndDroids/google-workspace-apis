@@ -5,7 +5,7 @@ use chrono::DateTime;
 use crate::auth::types::GoogleClient;
 
 pub(crate) struct Request {
-    pub(crate) client: reqwest::Client,
+    pub(crate) client: GoogleClient,
     pub(crate) url: String,
     pub(crate) method: reqwest::Method,
     pub(crate) params: HashMap<String, String>,
@@ -15,7 +15,7 @@ pub(crate) struct Request {
 impl Request {
     pub(crate) fn new(client: &GoogleClient) -> Self {
         Self {
-            client: client.client.clone(),
+            client: client.clone(),
             url: "".to_string(),
             method: reqwest::Method::GET,
             params: HashMap::new(),
