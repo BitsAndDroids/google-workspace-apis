@@ -116,8 +116,8 @@ pub async fn handle_google_oauth_redirect(
 
 async fn get_calendar_events(State(state): State<AppState>) -> Json<Vec<Event>> {
     // Create the request builder and immediately drop the lock
-    let google_client_guard = state.google_client.lock().await;
-    let client = google_client_guard.as_ref().unwrap();
+    let mut google_client_guard = state.google_client.lock().await;
+    let client = google_client_guard.as_mut().unwrap();
     let events = CalendarEventsClient::new(client)
         .get_events("primary")
         .single_events(true)

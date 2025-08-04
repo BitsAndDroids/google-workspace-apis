@@ -1,4 +1,4 @@
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use scopes::Scope;
 use types::{AccessToken, ClientCredentials};
 
@@ -144,7 +144,7 @@ pub async fn get_acces_token(
 
 pub async fn refresh_acces_token(
     client_credentials: &ClientCredentials,
-) -> Result<AccessToken, String> {
+) -> Result<AccessToken, anyhow::Error> {
     let url = "https://oauth2.googleapis.com/token";
     let params = [
         ("client_id", client_credentials.client_id.clone()),
@@ -173,9 +173,9 @@ pub async fn refresh_acces_token(
                 };
                 Ok(token)
             } else {
-                Err(format!("Failed to refresh token: {}", response.status()))
+                Err(anyhow!("Failed to refresh token: {}", response.status()))
             }
         }
-        Err(e) => Err(format!("Request error: {e}")),
+        Err(e) => Err(anyhow!("Request error: {e}")),
     }
 }

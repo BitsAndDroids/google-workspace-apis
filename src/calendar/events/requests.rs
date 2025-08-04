@@ -25,17 +25,17 @@ pub struct EventInsertMode;
 
 /// The generic type parameter `T` determines the mode of operation for this client,
 /// which affects which methods are available and what parameters can be set.
-pub struct CalendarEventsClient<T = Uninitialized> {
-    request: Request,
+pub struct CalendarEventsClient<'a, T = Uninitialized> {
+    request: Request<'a>,
     event: Option<CreateEventRequest>,
     _mode: std::marker::PhantomData<T>,
 }
 
 /// Implementation for the uninitialized event client.
 /// This provides the entry points to initialize the client for specific operations.
-impl CalendarEventsClient<Uninitialized> {
+impl<'a> CalendarEventsClient<'a, Uninitialized> {
     /// Creates a new calendar events client using the provided Google client for authentication.
-    pub fn new(client: &GoogleClient) -> Self {
+    pub fn new(client: &'a mut GoogleClient) -> Self {
         Self {
             request: Request::new(client),
             event: None,
@@ -68,7 +68,7 @@ impl CalendarEventsClient<Uninitialized> {
     ///     Json(events.unwrap().items.into())
     /// }
     /// ```
-    pub fn get_events(self, calendar_id: &str) -> CalendarEventsClient<EventListMode> {
+    pub fn get_events(self, calendar_id: &str) -> CalendarEventsClient<'a, EventListMode> {
         let mut builder = CalendarEventsClient {
             request: self.request,
             event: None,
@@ -97,7 +97,7 @@ impl CalendarEventsClient<Uninitialized> {
         calendar_id: &str,
         start: EventDateTime,
         end: EventDateTime,
-    ) -> CalendarEventsClient<EventInsertMode> {
+    ) -> CalendarEventsClient<'a, EventInsertMode> {
         let mut builder = CalendarEventsClient {
             request: self.request,
             event: Some(CreateEventRequest::new(start, end)),
@@ -151,7 +151,7 @@ impl EventType {
     }
 }
 
-impl PaginationRequestTrait for CalendarEventsClient<EventListMode> {
+impl<'a> PaginationRequestTrait for CalendarEventsClient<'a, EventListMode> {
     /// Maximum number of results to return.
     fn max_results(mut self, max: i64) -> Self {
         self.request
@@ -169,7 +169,7 @@ impl PaginationRequestTrait for CalendarEventsClient<EventListMode> {
     }
 }
 
-impl TimeRequestTrait for CalendarEventsClient<EventListMode> {
+impl<'a> TimeRequestTrait for CalendarEventsClient<'a, EventListMode> {
     /// Minimum time for events to return. If not set, all historicall events matching the other
     /// filters are returned.
     fn time_min(mut self, time_min: DateTime<chrono::Utc>) -> Self {
@@ -188,7 +188,7 @@ impl TimeRequestTrait for CalendarEventsClient<EventListMode> {
     }
 }
 
-impl CalendarEventsClient<EventListMode> {
+impl<'a> CalendarEventsClient<'a, EventListMode> {
     /// Set the type of events to filter by.
     pub fn event_type(mut self, type_: EventType) -> Self {
         self.request
@@ -248,7 +248,7 @@ impl CalendarEventsClient<EventListMode> {
     }
 }
 
-impl<T> CalendarEventsClient<T> {
+impl<'a, T> CalendarEventsClient<'a, T> {
     async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
     where
         R: DeserializeOwned,
@@ -294,7 +294,7 @@ impl<T> CalendarEventsClient<T> {
     }
 }
 
-impl CalendarEventsClient<EventInsertMode> {
+impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// Sets the summary (title) of the event being created.
     ///
     /// # Arguments
