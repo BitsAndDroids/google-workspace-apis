@@ -1,9 +1,9 @@
-use anyhow::Error;
+use anyhow::{anyhow, Error};
+use client::{AccessToken, ClientCredentials};
 use scopes::Scope;
-use types::{AccessToken, ClientCredentials};
 
+pub mod client;
 pub mod scopes;
-pub mod types;
 
 /// Helper function to generate the OAuth URL for Google authentication.
 /// # Example:
@@ -142,12 +142,14 @@ pub async fn get_acces_token(
     }
 }
 
-pub async fn refresh_acces_token(client_credentials: ClientCredentials) -> Result<String, String> {
+pub async fn refresh_acces_token(
+    client_credentials: &ClientCredentials,
+) -> Result<AccessToken, anyhow::Error> {
     let url = "https://oauth2.googleapis.com/token";
     let params = [
-        ("client_id", client_credentials.client_id),
-        ("client_secret", client_credentials.client_secret),
-        ("refresh_token", client_credentials.refresh_token),
+        ("client_id", client_credentials.client_id.clone()),
+        ("client_secret", client_credentials.client_secret.clone()),
+        ("refresh_token", client_credentials.refresh_token.clone()),
         ("grant_type", "refresh_token".to_string()),
     ];
 
@@ -157,12 +159,23 @@ pub async fn refresh_acces_token(client_credentials: ClientCredentials) -> Resul
     match res.await {
         Ok(response) => {
             if response.status().is_success() {
-                let json: serde_json::Value = response.json().await.unwrap();
-                Ok(json["access_token"].as_str().unwrap().to_string())
+                let json: serde_json::Value = response.json().await?;
+                let token = AccessToken {
+                    token_type: json["token_type"].as_str().unwrap_or_default().to_string(),
+                    access_token: json["access_token"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_string(),
+                    expires_in: json["expires_in"].as_i64().unwrap_or(0),
+                    refresh_token: client_credentials.refresh_token.clone(),
+                    refresh_token_expires_in: 0,
+                    scope: json["scope"].as_str().unwrap_or_default().to_string(),
+                };
+                Ok(token)
             } else {
-                Err(format!("Failed to refresh token: {}", response.status()))
+                Err(anyhow!("Failed to refresh token: {}", response.status()))
             }
         }
-        Err(e) => Err(format!("Request error: {e}")),
+        Err(e) => Err(anyhow!("Request error: {e}")),
     }
 }

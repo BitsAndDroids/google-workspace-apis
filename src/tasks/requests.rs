@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use anyhow::{Error, anyhow};
+use anyhow::{anyhow, Error};
 use reqwest::Method;
 use serde::de::DeserializeOwned;
 
 use crate::{
-    auth::types::GoogleClient,
+    auth::client::GoogleClient,
     utils::request::{PaginationRequestTrait, Request},
 };
 
@@ -29,14 +29,14 @@ pub trait TaskRequestBuilderTrait {
     type TaskRequestBuilder;
 }
 
-pub struct TasksClient<T = Uninitialized> {
-    request: Request,
+pub struct TasksClient<'a, T = Uninitialized> {
+    request: Request<'a>,
     task: Option<Task>,
     _mode: std::marker::PhantomData<T>,
 }
 
-impl TasksClient<Uninitialized> {
-    pub fn new(client: &GoogleClient) -> Self {
+impl<'a> TasksClient<'a, Uninitialized> {
+    pub fn new(client: &'a mut GoogleClient) -> Self {
         Self {
             request: Request::new(client),
             task: None,
@@ -45,7 +45,7 @@ impl TasksClient<Uninitialized> {
     }
     /// Get a list of task lists for the authenticated user.
     /// This does not retrieve the actual tasks in the lists,
-    pub fn get_task_lists(self) -> TasksClient<TaskListMode> {
+    pub fn get_task_lists(self) -> TasksClient<'a, TaskListMode> {
         let mut builder = TasksClient {
             request: self.request,
             task: None,
@@ -57,7 +57,7 @@ impl TasksClient<Uninitialized> {
     }
 
     /// Get a list of tasks from the specified task list.
-    pub fn get_tasks(self, task_list_id: &str) -> TasksClient<TasksMode> {
+    pub fn get_tasks(self, task_list_id: &str) -> TasksClient<'a, TasksMode> {
         let mut builder = TasksClient {
             request: self.request,
             task: None,
@@ -69,7 +69,7 @@ impl TasksClient<Uninitialized> {
         builder
     }
 
-    pub fn insert_task(self, task_list_id: &str) -> TasksClient<TaskInsertMode> {
+    pub fn insert_task(self, task_list_id: &str) -> TasksClient<'a, TaskInsertMode> {
         let mut builder = TasksClient {
             request: self.request,
             task: Some(Task::new()),
@@ -81,7 +81,11 @@ impl TasksClient<Uninitialized> {
         builder
     }
 
-    pub fn complete_task(self, task_id: &str, task_list_id: &str) -> TasksClient<TaskPatchMode> {
+    pub fn complete_task(
+        self,
+        task_id: &str,
+        task_list_id: &str,
+    ) -> TasksClient<'a, TaskPatchMode> {
         let mut builder = TasksClient {
             request: self.request,
             task: None,
@@ -102,16 +106,18 @@ impl TasksClient<Uninitialized> {
     }
 }
 
-impl<T> TasksClient<T> {
-    async fn make_request<R>(&self) -> Result<Option<R>, Error>
+impl<'a, T> TasksClient<'a, T> {
+    async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
     where
         R: DeserializeOwned,
     {
+        self.request.client.refresh_acces_token_check().await?;
         match self.request.method {
             Method::GET => {
                 let res = self
                     .request
                     .client
+                    .req_client
                     .get(&self.request.url)
                     .query(&self.request.params)
                     .send()
@@ -128,6 +134,7 @@ impl<T> TasksClient<T> {
                 let res = self
                     .request
                     .client
+                    .req_client
                     .post(&self.request.url)
                     .body(serde_json::to_string(&self.task).unwrap())
                     .query(&self.request.params)
@@ -145,6 +152,7 @@ impl<T> TasksClient<T> {
                 let res = self
                     .request
                     .client
+                    .req_client
                     .patch(&self.request.url)
                     .body(self.request.body.clone().unwrap_or_default())
                     .query(&self.request.params)
@@ -162,7 +170,7 @@ impl<T> TasksClient<T> {
     }
 }
 
-impl<T: InitializedGetMode> PaginationRequestTrait for TasksClient<T> {
+impl<'a, T: InitializedGetMode> PaginationRequestTrait for TasksClient<'a, T> {
     /// Sets the maximum number of results to return.
     fn max_results(mut self, max: i64) -> Self {
         self.request
@@ -180,9 +188,9 @@ impl<T: InitializedGetMode> PaginationRequestTrait for TasksClient<T> {
     }
 }
 
-impl TasksClient<TaskListMode> {
+impl<'a> TasksClient<'a, TaskListMode> {
     /// Makes a request to retrieve the task lists.
-    pub async fn request(self) -> Result<Option<TaskLists>, Error> {
+    pub async fn request(&mut self) -> Result<Option<TaskLists>, Error> {
         self.make_request().await
     }
 }
@@ -197,13 +205,13 @@ impl TasksClient<TaskListMode> {
 /// let client = TasksClient::new(client);
 /// let tasks = client.show_completed(true).get_due_min(some_date).request().await?;
 /// ```
-impl TasksClient<TasksMode> {
+impl<'a> TasksClient<'a, TasksMode> {
     /// Makes a request to retrieve the tasks from the specified task list.
     ///
     /// # Returns
     /// * `Result<Option<Tasks>, Error>` - A result containing the tasks if successful,
     ///   or an error if the request failed. Returns `None` if no tasks were found.
-    pub async fn request(self) -> Result<Option<Tasks>, Error> {
+    pub async fn request(&mut self) -> Result<Option<Tasks>, Error> {
         self.make_request().await
     }
     /// Filter tasks by completion date to include only tasks completed before the specified date.
@@ -343,13 +351,13 @@ impl TasksClient<TasksMode> {
 /// let client = TasksClient::new(client);
 /// let task = client.set_task_title("New Task").set_task_notes("Details").request().await?;
 /// ```
-impl TasksClient<TaskInsertMode> {
+impl<'a> TasksClient<'a, TaskInsertMode> {
     /// Makes a request to create a task with the specified properties.
     ///
     /// # Returns
     /// * `Result<Option<Tasks>, Error>` - A result containing the created task if successful,
     ///   or an error if the request failed.
-    pub async fn request(self) -> Result<Option<Tasks>, Error> {
+    pub async fn request(&mut self) -> Result<Option<Tasks>, Error> {
         self.make_request().await
     }
 
@@ -520,13 +528,13 @@ impl TasksClient<TaskInsertMode> {
     }
 }
 
-impl TasksClient<TaskPatchMode> {
+impl<'a> TasksClient<'a, TaskPatchMode> {
     /// Makes a request to update the task with the specified properties.
     ///
     /// # Returns
     /// * `Result<Option<Tasks>, Error>` - A result containing the updated task if successful,
     ///   or an error if the request failed.
-    pub async fn request(self) -> Result<Option<Task>, Error> {
+    pub async fn request(&mut self) -> Result<Option<Task>, Error> {
         self.make_request().await
     }
 }

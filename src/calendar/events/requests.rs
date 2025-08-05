@@ -1,10 +1,10 @@
 use crate::{
-    auth::types::GoogleClient,
+    auth::client::GoogleClient,
     calendar::events::types::{CreateEventRequest, EventDateTime},
     utils::request::{PaginationRequestTrait, Request, TimeRequestTrait},
 };
 
-use anyhow::{Error, anyhow};
+use anyhow::{anyhow, Error};
 use chrono::DateTime;
 use reqwest::Method;
 use serde::de::DeserializeOwned;
@@ -25,17 +25,17 @@ pub struct EventInsertMode;
 
 /// The generic type parameter `T` determines the mode of operation for this client,
 /// which affects which methods are available and what parameters can be set.
-pub struct CalendarEventsClient<T = Uninitialized> {
-    request: Request,
+pub struct CalendarEventsClient<'a, T = Uninitialized> {
+    request: Request<'a>,
     event: Option<CreateEventRequest>,
     _mode: std::marker::PhantomData<T>,
 }
 
 /// Implementation for the uninitialized event client.
 /// This provides the entry points to initialize the client for specific operations.
-impl CalendarEventsClient<Uninitialized> {
+impl<'a> CalendarEventsClient<'a, Uninitialized> {
     /// Creates a new calendar events client using the provided Google client for authentication.
-    pub fn new(client: &GoogleClient) -> Self {
+    pub fn new(client: &'a mut GoogleClient) -> Self {
         Self {
             request: Request::new(client),
             event: None,
@@ -68,7 +68,7 @@ impl CalendarEventsClient<Uninitialized> {
     ///     Json(events.unwrap().items.into())
     /// }
     /// ```
-    pub fn get_events(self, calendar_id: &str) -> CalendarEventsClient<EventListMode> {
+    pub fn get_events(self, calendar_id: &str) -> CalendarEventsClient<'a, EventListMode> {
         let mut builder = CalendarEventsClient {
             request: self.request,
             event: None,
@@ -97,7 +97,7 @@ impl CalendarEventsClient<Uninitialized> {
         calendar_id: &str,
         start: EventDateTime,
         end: EventDateTime,
-    ) -> CalendarEventsClient<EventInsertMode> {
+    ) -> CalendarEventsClient<'a, EventInsertMode> {
         let mut builder = CalendarEventsClient {
             request: self.request,
             event: Some(CreateEventRequest::new(start, end)),
@@ -151,7 +151,7 @@ impl EventType {
     }
 }
 
-impl PaginationRequestTrait for CalendarEventsClient<EventListMode> {
+impl<'a> PaginationRequestTrait for CalendarEventsClient<'a, EventListMode> {
     /// Maximum number of results to return.
     fn max_results(mut self, max: i64) -> Self {
         self.request
@@ -169,7 +169,7 @@ impl PaginationRequestTrait for CalendarEventsClient<EventListMode> {
     }
 }
 
-impl TimeRequestTrait for CalendarEventsClient<EventListMode> {
+impl<'a> TimeRequestTrait for CalendarEventsClient<'a, EventListMode> {
     /// Minimum time for events to return. If not set, all historicall events matching the other
     /// filters are returned.
     fn time_min(mut self, time_min: DateTime<chrono::Utc>) -> Self {
@@ -188,7 +188,7 @@ impl TimeRequestTrait for CalendarEventsClient<EventListMode> {
     }
 }
 
-impl CalendarEventsClient<EventListMode> {
+impl<'a> CalendarEventsClient<'a, EventListMode> {
     /// Set the type of events to filter by.
     pub fn event_type(mut self, type_: EventType) -> Self {
         self.request
@@ -243,21 +243,23 @@ impl CalendarEventsClient<EventListMode> {
     }
 
     /// Returns a request result for getting a list of events from the specified calendar.
-    pub async fn request(self) -> Result<Option<EventList>, Error> {
+    pub async fn request(&mut self) -> Result<Option<EventList>, Error> {
         self.make_request().await
     }
 }
 
-impl<T> CalendarEventsClient<T> {
-    async fn make_request<R>(&self) -> Result<Option<R>, Error>
+impl<'a, T> CalendarEventsClient<'a, T> {
+    async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
     where
         R: DeserializeOwned,
     {
+        self.request.client.refresh_acces_token_check().await?;
         match self.request.method {
             Method::GET => {
                 let res = self
                     .request
                     .client
+                    .req_client
                     .get(&self.request.url)
                     .query(&self.request.params)
                     .send()
@@ -274,6 +276,7 @@ impl<T> CalendarEventsClient<T> {
                 let res = self
                     .request
                     .client
+                    .req_client
                     .post(&self.request.url)
                     .body(serde_json::to_string(&self.event).unwrap())
                     .query(&self.request.params)
@@ -291,7 +294,7 @@ impl<T> CalendarEventsClient<T> {
     }
 }
 
-impl CalendarEventsClient<EventInsertMode> {
+impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// Sets the summary (title) of the event being created.
     ///
     /// # Arguments
@@ -526,7 +529,7 @@ impl CalendarEventsClient<EventInsertMode> {
     /// * `Ok(Some(Event))` - The created event if successful
     /// * `Ok(None)` - If the request was unsuccessful
     /// * `Err` - If there was an error making the request
-    pub async fn request(self) -> Result<Option<Event>, Error> {
+    pub async fn request(&mut self) -> Result<Option<Event>, Error> {
         self.make_request().await
     }
 }

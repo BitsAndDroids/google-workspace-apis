@@ -18,13 +18,13 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
 use axum::{
-    Json, Router,
     extract::{Query, State},
+    Json, Router,
 };
 use google_workspace_apis::{
     auth::{
+        client::{ClientCredentials, GoogleClient},
         scopes::Scope,
-        types::{ClientCredentials, GoogleClient},
     },
     calendar::events::types::Event,
 };
@@ -107,17 +107,16 @@ pub async fn handle_google_oauth_redirect(
         refresh_token: access_token.refresh_token.clone(),
     };
 
-    let new_client = GoogleClient::new(client_credentials, access_token);
+    let new_client = GoogleClient::new(client_credentials, access_token, true);
     let mut guard = state.google_client.lock().await;
     *guard = Some(new_client);
-    println!("Google client initialized successfully");
     StatusCode::OK
 }
 
 async fn get_calendar_events(State(state): State<AppState>) -> Json<Vec<Event>> {
     // Create the request builder and immediately drop the lock
-    let google_client_guard = state.google_client.lock().await;
-    let client = google_client_guard.as_ref().unwrap();
+    let mut google_client_guard = state.google_client.lock().await;
+    let client = google_client_guard.as_mut().unwrap();
     let events = CalendarEventsClient::new(client)
         .get_events("primary")
         .single_events(true)
