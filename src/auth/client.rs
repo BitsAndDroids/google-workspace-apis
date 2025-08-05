@@ -139,23 +139,7 @@ impl GoogleClient {
         access_token: AccessToken,
         auto_refresh_token: bool,
     ) -> Self {
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert(
-            reqwest::header::AUTHORIZATION,
-            format!("Bearer {}", access_token.access_token)
-                .parse()
-                .unwrap(),
-        );
-        headers.insert(reqwest::header::ACCEPT, "application/json".parse().unwrap());
-        headers.insert(
-            reqwest::header::CONTENT_TYPE,
-            "application/json".parse().unwrap(),
-        );
-        let client = reqwest::Client::builder()
-            .default_headers(headers)
-            .build()
-            .expect("Failed to build reqwest client");
-
+        let client = build_default_reqwest_client(&access_token.access_token);
         Self {
             client_credentials,
             access_token: Some(access_token.into()),
@@ -198,7 +182,9 @@ impl GoogleClient {
 
     pub async fn update_access_token(&mut self) -> Result<(), Error> {
         let new_token = refresh_acces_token(&self.client_credentials).await?;
-        self.access_token = Some(new_token.into());
+        self.access_token = Some(new_token.clone().into());
+        let client = build_default_reqwest_client(&new_token.access_token);
+        self.req_client = client;
 
         for handler in &mut self.refresh_handlers {
             handler.on_token_refresh(
@@ -223,6 +209,23 @@ pub fn get_validity_token_secs(datetime_str: &str) -> i64 {
     let saved_date = chrono::DateTime::<chrono::Utc>::from_str(datetime_str).unwrap();
     let seconds_valid = saved_date - now;
     seconds_valid.num_seconds()
+}
+
+fn build_default_reqwest_client(token: &str) -> reqwest::Client {
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        reqwest::header::AUTHORIZATION,
+        format!("Bearer {token}").parse().unwrap(),
+    );
+    headers.insert(reqwest::header::ACCEPT, "application/json".parse().unwrap());
+    headers.insert(
+        reqwest::header::CONTENT_TYPE,
+        "application/json".parse().unwrap(),
+    );
+    reqwest::Client::builder()
+        .default_headers(headers)
+        .build()
+        .expect("Failed to build reqwest client")
 }
 
 // Implement for Fn closures

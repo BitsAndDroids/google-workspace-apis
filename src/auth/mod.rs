@@ -159,7 +159,8 @@ pub async fn refresh_acces_token(
     match res.await {
         Ok(response) => {
             if response.status().is_success() {
-                let json: serde_json::Value = response.json().await.unwrap();
+                let json: serde_json::Value = response.json().await?;
+                println!("RESPONSE {json}");
                 let token = AccessToken {
                     token_type: json["token_type"].as_str().unwrap_or_default().to_string(),
                     access_token: json["access_token"]
