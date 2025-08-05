@@ -23,8 +23,8 @@ use axum::{
 };
 use google_workspace_apis::{
     auth::{
+        client::{ClientCredentials, GoogleClient},
         scopes::Scope,
-        types::{ClientCredentials, GoogleClient},
     },
     calendar::events::types::Event,
 };
@@ -110,7 +110,6 @@ pub async fn handle_google_oauth_redirect(
     let new_client = GoogleClient::new(client_credentials, access_token, true);
     let mut guard = state.google_client.lock().await;
     *guard = Some(new_client);
-    println!("Google client initialized successfully");
     StatusCode::OK
 }
 

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use chrono::DateTime;
 
-use crate::auth::types::GoogleClient;
+use crate::auth::client::GoogleClient;
 
 pub(crate) struct Request<'a> {
     pub(crate) client: &'a mut GoogleClient,

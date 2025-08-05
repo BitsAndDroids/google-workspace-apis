@@ -5,7 +5,7 @@ use reqwest::Method;
 use serde::de::DeserializeOwned;
 
 use crate::{
-    auth::types::GoogleClient,
+    auth::client::GoogleClient,
     utils::request::{PaginationRequestTrait, Request},
 };
 

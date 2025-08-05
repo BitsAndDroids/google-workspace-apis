@@ -1,5 +1,5 @@
 use crate::{
-    auth::types::GoogleClient,
+    auth::client::GoogleClient,
     calendar::events::types::{CreateEventRequest, EventDateTime},
     utils::request::{PaginationRequestTrait, Request, TimeRequestTrait},
 };

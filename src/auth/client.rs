@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use anyhow::Error;
 use chrono::{DateTime, Utc};
@@ -125,7 +125,6 @@ impl From<AccessToken> for ClientTokenData {
     fn from(token: AccessToken) -> Self {
         let now = chrono::Utc::now();
         let new_expires_on = now + chrono::Duration::seconds(token.expires_in);
-        println!("NEW FROM EXPIRES ON {new_expires_on}");
         Self {
             access_token: token.access_token,
             expires_on: new_expires_on,
@@ -176,10 +175,6 @@ impl GoogleClient {
     // Modify your refresh_access_token_check method to notify handlers
     pub async fn refresh_acces_token_check(&mut self) -> Result<(), Error> {
         if self.auto_refresh_token && !self.is_access_token_valid() {
-            println!(
-                "expired on {}",
-                self.access_token.as_ref().unwrap().expires_on
-            );
             self.update_access_token().await?;
         }
         Ok(())
@@ -196,12 +191,6 @@ impl GoogleClient {
     pub fn is_access_token_valid(&self) -> bool {
         if let Some(token_data) = &self.access_token {
             let now = chrono::Utc::now();
-            println!(
-                "Token validation: now={}, expires_on={}, valid={}",
-                now,
-                token_data.expires_on,
-                now < token_data.expires_on
-            );
             return now < token_data.expires_on;
         }
         false
@@ -209,12 +198,7 @@ impl GoogleClient {
 
     pub async fn update_access_token(&mut self) -> Result<(), Error> {
         let new_token = refresh_acces_token(&self.client_credentials).await?;
-        println!("new token {}", new_token.access_token);
         self.access_token = Some(new_token.into());
-        println!(
-            "new expires on {}",
-            self.access_token.as_ref().unwrap().expires_on
-        );
 
         for handler in &mut self.refresh_handlers {
             handler.on_token_refresh(
@@ -229,6 +213,16 @@ impl GoogleClient {
 
 pub trait TokenRefreshHandler: Send + Sync {
     fn on_token_refresh(&self, new_token: String, refresh_token: String, new_expiry: DateTime<Utc>);
+}
+
+/// Helper function to convert a stored expiration date in UTC string format
+/// to the amount of seconds the token is still valid
+pub fn get_validity_token_secs(datetime_str: &str) -> i64 {
+    let now = chrono::Utc::now();
+
+    let saved_date = chrono::DateTime::<chrono::Utc>::from_str(datetime_str).unwrap();
+    let seconds_valid = saved_date - now;
+    seconds_valid.num_seconds()
 }
 
 // Implement for Fn closures

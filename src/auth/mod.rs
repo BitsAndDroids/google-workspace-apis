@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Error};
+use client::{AccessToken, ClientCredentials};
 use scopes::Scope;
-use types::{AccessToken, ClientCredentials};
 
+pub mod client;
 pub mod scopes;
-pub mod types;
 
 /// Helper function to generate the OAuth URL for Google authentication.
 /// # Example:
