@@ -7,9 +7,11 @@ use crate::{
 use anyhow::{anyhow, Error};
 use chrono::DateTime;
 use reqwest::Method;
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 
-use super::types::{BirthdayProperties, Event, EventAttendee, EventList, OutOfOfficeProperties};
+use super::types::{
+    BirthdayProperties, Event, EventAttendee, EventList, OutOfOfficeProperties, PatchEventRequest,
+};
 
 /// Indicates that the request builder is not yet initialized with a specific mode.
 pub struct Uninitialized;
@@ -23,11 +25,20 @@ pub struct EventListMode;
 /// This struct determines which filters can be applied to the request.
 pub struct EventInsertMode;
 
+pub struct EventPatchMode;
+
+#[derive(Serialize)]
+#[serde(untagged)]
+pub enum EventRequest {
+    Create(CreateEventRequest),
+    Patch(PatchEventRequest),
+}
+
 /// The generic type parameter `T` determines the mode of operation for this client,
 /// which affects which methods are available and what parameters can be set.
 pub struct CalendarEventsClient<'a, T = Uninitialized> {
     request: Request<'a>,
-    event: Option<CreateEventRequest>,
+    event: Option<EventRequest>,
     _mode: std::marker::PhantomData<T>,
 }
 
@@ -100,12 +111,29 @@ impl<'a> CalendarEventsClient<'a, Uninitialized> {
     ) -> CalendarEventsClient<'a, EventInsertMode> {
         let mut builder = CalendarEventsClient {
             request: self.request,
-            event: Some(CreateEventRequest::new(start, end)),
+            event: Some(EventRequest::Create(CreateEventRequest::new(start, end))),
             _mode: std::marker::PhantomData,
         };
         builder.request.url =
             format!("https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events",);
         builder.request.method = Method::POST;
+        builder
+    }
+
+    pub fn patch_event(
+        self,
+        calendar_id: &str,
+        event_id: &str,
+    ) -> CalendarEventsClient<'a, EventPatchMode> {
+        let mut builder = CalendarEventsClient {
+            request: self.request,
+            event: Some(EventRequest::Patch(PatchEventRequest::default())),
+            _mode: std::marker::PhantomData,
+        };
+        builder.request.url = format!(
+            "https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}"
+        );
+        builder.request.method = Method::PATCH;
         builder
     }
 }
@@ -305,11 +333,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// Panics if the event has not been initialized for insertion
     pub fn set_event_summary(mut self, summary: &str) -> Self {
-        match self.event {
-            Some(ref mut event) => {
-                event.summary = Some(summary.to_string());
-            }
-            None => panic!("Event not initialized for insertion"),
+        if let Some(EventRequest::Create(ref mut event)) = self.event {
+            event.summary = Some(summary.to_string());
         }
         self
     }
@@ -324,9 +349,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// Panics if the event has not been initialized for insertion
     pub fn set_event_location(mut self, location: &str) -> Self {
-        match self.event {
-            Some(ref mut event) => event.location = Some(location.to_string()),
-            None => panic!("Event not initialized for insertion"),
+        if let Some(EventRequest::Create(ref mut event)) = self.event {
+            event.location = Some(location.to_string())
         }
         self
     }
@@ -341,9 +365,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// Panics if the event has not been initialized for insertion
     pub fn set_event_attendees(mut self, attendees: Vec<EventAttendee>) -> Self {
-        match self.event {
-            Some(ref mut event) => event.attendees = attendees,
-            None => panic!("Event not initialized for insertion"),
+        if let Some(EventRequest::Create(ref mut event)) = self.event {
+            event.attendees = attendees
         }
         self
     }
@@ -358,11 +381,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// Panics if the event has not been initialized for insertion
     pub fn set_event_type(mut self, type_: EventType) -> Self {
-        match self.event {
-            Some(ref mut event) => {
-                event.event_type = Some(type_.as_str().to_string());
-            }
-            None => panic!("Event not initialized for insertion"),
+        if let Some(EventRequest::Create(ref mut event)) = self.event {
+            event.event_type = Some(type_.as_str().to_string())
         }
         self
     }
@@ -377,11 +397,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// Panics if the event has not been initialized for insertion
     pub fn set_birtday_properties(mut self, birtday_properties: BirthdayProperties) -> Self {
-        match self.event {
-            Some(ref mut event) => {
-                event.birthday_properties = Some(birtday_properties);
-            }
-            None => panic!("Event not initialized for insertion"),
+        if let Some(EventRequest::Create(ref mut event)) = self.event {
+            event.birthday_properties = Some(birtday_properties)
         }
         self
     }
@@ -396,11 +413,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// Panics if the event has not been initialized for insertion
     pub fn set_color_id(mut self, color_id: &str) -> Self {
-        match self.event {
-            Some(ref mut event) => {
-                event.color_id = Some(color_id.to_string());
-            }
-            None => panic!("Event not initialized for insertion"),
+        if let Some(EventRequest::Create(ref mut event)) = self.event {
+            event.color_id = Some(color_id.to_string())
         }
         self
     }
@@ -415,11 +429,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// Panics if the event has not been initialized for insertion
     pub fn set_guests_can_invite_others(mut self, can_invite: bool) -> Self {
-        match self.event {
-            Some(ref mut event) => {
-                event.guests_can_invite_others = Some(can_invite);
-            }
-            None => panic!("Event not initialized for insertion"),
+        if let Some(EventRequest::Create(ref mut event)) = self.event {
+            event.guests_can_invite_others = Some(can_invite)
         }
         self
     }
@@ -434,11 +445,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// Panics if the event has not been initialized for insertion
     pub fn set_guests_can_modify(mut self, can_modify: bool) -> Self {
-        match self.event {
-            Some(ref mut event) => {
-                event.guests_can_modify = Some(can_modify);
-            }
-            None => panic!("Event not initialized for insertion"),
+        if let Some(EventRequest::Create(ref mut event)) = self.event {
+            event.guests_can_modify = Some(can_modify)
         }
         self
     }
@@ -453,11 +461,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// Panics if the event has not been initialized for insertion
     pub fn set_guests_can_see_other_guests(mut self, can_see: bool) -> Self {
-        match self.event {
-            Some(ref mut event) => {
-                event.guests_can_see_other_guests = Some(can_see);
-            }
-            None => panic!("Event not initialized for insertion"),
+        if let Some(EventRequest::Create(ref mut event)) = self.event {
+            event.guests_can_see_other_guests = Some(can_see)
         }
         self
     }
@@ -472,11 +477,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// Panics if the event has not been initialized for insertion
     pub fn set_id(mut self, id: &str) -> Self {
-        match self.event {
-            Some(ref mut event) => {
-                event.id = Some(id.to_string());
-            }
-            None => panic!("Event not initialized for insertion"),
+        if let Some(EventRequest::Create(ref mut event)) = self.event {
+            event.id = Some(id.to_string())
         }
         self
     }
@@ -494,11 +496,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
         mut self,
         out_of_office_properties: OutOfOfficeProperties,
     ) -> Self {
-        match self.event {
-            Some(ref mut event) => {
-                event.out_of_office_properties = Some(out_of_office_properties);
-            }
-            None => panic!("Event not initialized for insertion"),
+        if let Some(EventRequest::Create(ref mut event)) = self.event {
+            event.out_of_office_properties = Some(out_of_office_properties)
         }
         self
     }
@@ -513,11 +512,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// Panics if the event has not been initialized for insertion
     pub fn set_recurrence(mut self, recurrence: Vec<String>) -> Self {
-        match self.event {
-            Some(ref mut event) => {
-                event.recurrence = recurrence;
-            }
-            None => panic!("Event not initialized for insertion"),
+        if let Some(EventRequest::Create(ref mut event)) = self.event {
+            event.recurrence = recurrence
         }
         self
     }
@@ -527,6 +523,41 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Returns
     ///
     /// * `Ok(Some(Event))` - The created event if successful
+    /// * `Ok(None)` - If the request was unsuccessful
+    /// * `Err` - If there was an error making the request
+    pub async fn request(&mut self) -> Result<Option<Event>, Error> {
+        self.make_request().await
+    }
+}
+
+impl<'a> CalendarEventsClient<'a, EventPatchMode> {
+    /// Patch the end of the event
+    ///  
+    ///  # Arguments
+    ///
+    ///  * `end` - new EventDateTime format
+    pub fn set_end(mut self, end: EventDateTime) -> Self {
+        if let Some(EventRequest::Patch(ref mut event)) = self.event {
+            event.end = Some(end);
+        }
+        self
+    }
+    /// Patch the start of the event
+    ///  
+    ///  # Arguments
+    ///
+    ///  * `start` - new EventDateTime format
+    pub fn set_start(mut self, start: EventDateTime) -> Self {
+        if let Some(EventRequest::Patch(ref mut event)) = self.event {
+            event.start = Some(start);
+        }
+        self
+    }
+    /// Executes the request to create the event.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Some(Event))` - The patched event if successful
     /// * `Ok(None)` - If the request was unsuccessful
     /// * `Err` - If there was an error making the request
     pub async fn request(&mut self) -> Result<Option<Event>, Error> {

@@ -94,10 +94,6 @@ impl<'a> TasksClient<'a, Uninitialized> {
         builder.request.url =
             format!("https://tasks.googleapis.com/tasks/v1/lists/{task_list_id}/tasks/{task_id}");
         builder.request.method = reqwest::Method::PATCH;
-        let mut params: HashMap<String, String> = HashMap::new();
-        params.insert("task".to_string(), task_id.to_string());
-        params.insert("taskList".to_string(), task_list_id.to_string());
-        builder.request.params = params;
         let payload = serde_json::json!({
             "status": "completed"
         });
