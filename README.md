@@ -1,22 +1,19 @@
-![Crates.io Version](https://img.shields.io/crates/v/google-workspace-apis)
 # Google workspace API client
 
-This crate is an unofficial opinionated library that unifies the Google Workspace API clients.
-The current workspace crate landscape is highly fragmented, with each API employing a distinct approach.
+[![Crates.io Version](https://img.shields.io/crates/v/google-workspace-apis)](https://crates.io/crates/google-workspace-apis)
+
+This crate is an unofficial opinionated library
+that unifies the Google Workspace API clients.
+The current workspace crate landscape is highly fragmented,
+with each API employing a distinct approach.
 This library aims to provide a unified interface for all Google Workspace APIs.
 
 ## Example
 
 ```rust
-
-    let client_credentials = ClientCredentials {
-        redirect_uri: google_cfg.google_redirect_uri.to_string(),
-        client_id: google_cfg.google_client_id.to_string(),
-        client_secret: google_cfg.google_client_secret.to_string(),
-        refresh_token: access_token.refresh_token.clone(),
-    };
-
-    let new_client = GoogleClient::new(client_credentials, access_token);
+    // If the last parameter is set to true the client
+    // will automatically refresh the access token if it expires
+    let new_client = GoogleClient::new(client_credentials, access_token, true);
 
     // Insert a task
     match TasksClient::new(client)
@@ -53,39 +50,48 @@ I'm currently working on the following APIs (more will be added soon):
 - Get Access token
 - Refresh token
 
-### Calendar (WIP)
+### Calendar
 
 For the API documentation, see the [Calender API documentation](https://developers.google.com/workspace/calendar/api/guides/overview).
 
-The calls that are currently supported by this crate are:
+The actions that are currently supported by this crate are:
 
-#### GET
+#### Get (calendar API)
 
 - Events (returns a list of events for a specified calendar)
 
-#### Insert
+#### Insert (calendar API)
 
 - Insert event in specified calendar
 
-### Tasks (WIP)
+#### Patch (calendar API)
 
-For the api documentation, see the [Tasks API documentation](https://developers.google.com/workspace/tasks/reference/rest).
+- Patch fields of an event
 
-The calls that are currently supported by this crate are:
+### Tasks
 
-#### GET
+For the API documentation, see the [Tasks API documentation](https://developers.google.com/workspace/tasks/reference/rest).
+
+The actions that are currently supported by this crate are:
+
+#### Get (tasks API)
 
 - Tasklists (returns a list of task lists for the authenticated user)
 - Tasks (returns a list of tasks for a specified task list)
 
-#### Insert
+#### Insert (tasks API)
 
 - Task (inserts a new task in a specified task list)
 
+#### Patch (tasks API)
+
+- Complete a task
+
 ## Features
 
-To include the correct API client, you need to define the feature in your `Cargo.toml` file:
+To include the correct API client,
+you need to define the feature in your `Cargo.toml` file:
 
 ```toml
-google-workspaces-api = { version: "0.1", features = ["calendar", "tasks"] }
+google-workspaces-api = { version: "1.0", features = ["calendar", "tasks"] }
 ```

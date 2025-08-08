@@ -4,16 +4,16 @@ use chrono::DateTime;
 
 use crate::auth::client::GoogleClient;
 
-pub(crate) struct Request<'a> {
-    pub(crate) client: &'a mut GoogleClient,
-    pub(crate) url: String,
-    pub(crate) method: reqwest::Method,
-    pub(crate) params: HashMap<String, String>,
-    pub(crate) body: Option<String>,
+pub struct Request<'a> {
+    pub client: &'a mut GoogleClient,
+    pub url: String,
+    pub method: reqwest::Method,
+    pub params: HashMap<String, String>,
+    pub body: Option<String>,
 }
 
 impl<'a> Request<'a> {
-    pub(crate) fn new(client: &'a mut GoogleClient) -> Self {
+    pub fn new(client: &'a mut GoogleClient) -> Self {
         Self {
             client,
             url: "".to_string(),

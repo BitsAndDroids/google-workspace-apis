@@ -457,7 +457,7 @@ pub struct EventPerson {
     pub self_: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, JsonSchema, Default)]
 pub struct EventDateTime {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub date: Option<String>,
@@ -1110,7 +1110,118 @@ pub struct EventList {
     pub updated: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+pub struct PatchEventRequest {
+    /// The (exclusive) end time of the event
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end: Option<EventDateTime>,
+
+    /// The (inclusive) start time of the event
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start: Option<EventDateTime>,
+
+    /// Whether anyone can invite themselves to the event (deprecated)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub anyone_can_add_self: Option<bool>,
+
+    /// The attendees of the event
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub attendees: Vec<EventAttendee>,
+
+    /// Birthday event properties
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub birthday_properties: Option<BirthdayProperties>,
+
+    /// The color ID of the event
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_id: Option<String>,
+
+    /// Conference-related information
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub conference_data: Option<ConferenceData>,
+
+    /// Description of the event (can contain HTML)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    /// Event type (default, focusTime, etc)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_type: Option<String>,
+
+    /// Extended properties
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extended_properties: Option<ExtendedProperties>,
+
+    /// Focus time properties
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub focus_time_properties: Option<FocusTimeProperties>,
+
+    /// Gadget information (deprecated)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gadget: Option<EventGadget>,
+
+    /// Whether attendees can invite others
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guests_can_invite_others: Option<bool>,
+
+    /// Whether attendees can modify the event
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guests_can_modify: Option<bool>,
+
+    /// Whether attendees can see other guests
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guests_can_see_other_guests: Option<bool>,
+
+    /// Opaque identifier of the event
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+
+    /// Geographic location of the event
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<String>,
+
+    /// Out of office properties
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out_of_office_properties: Option<OutOfOfficeProperties>,
+
+    /// Recurrence rules
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub recurrence: Vec<String>,
+
+    /// Reminder settings
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reminders: Option<EventReminders>,
+
+    /// Sequence number
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sequence: Option<i32>,
+
+    /// Source information
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<EventSource>,
+
+    /// Event status
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+
+    /// Event summary/title
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+
+    /// Whether the event blocks time on the calendar
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transparency: Option<String>,
+
+    /// Visibility of the event
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub visibility: Option<String>,
+
+    /// Working location properties
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub working_location_properties: Option<WorkingLocationProperties>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
 pub struct CreateEventRequest {
     /// Required: The (exclusive) end time of the event
     pub end: EventDateTime,

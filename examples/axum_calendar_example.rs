@@ -13,7 +13,10 @@
 /// - Navigate to localhost:8080/api/v1/google/calendar/events
 /// - See your upcomming events
 ///  
-use google_workspace_apis::calendar::{events::requests::CalendarEventsClient, prelude::*};
+use google_workspace_apis::calendar::{
+    events::{requests::CalendarEventsClient, types::EventDateTime},
+    prelude::*,
+};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
@@ -107,6 +110,8 @@ pub async fn handle_google_oauth_redirect(
         refresh_token: access_token.refresh_token.clone(),
     };
 
+    // The last parameter ditctates wether the client will refresh the token automatically using
+    // the refresh token if it expires
     let new_client = GoogleClient::new(client_credentials, access_token, true);
     let mut guard = state.google_client.lock().await;
     *guard = Some(new_client);
@@ -130,9 +135,50 @@ async fn get_calendar_events(State(state): State<AppState>) -> Json<Vec<Event>> 
     Json(events.unwrap().items)
 }
 
+async fn insert_calendar_event(State(state): State<AppState>) {
+    let mut google_client_guard = state.google_client.lock().await;
+    let client = google_client_guard.as_mut().unwrap();
+    let start: EventDateTime = EventDateTime {
+        date: Some("2025-07-28".to_string()),
+        date_time: None,
+        time_zone: None,
+    };
+    let end: EventDateTime = EventDateTime {
+        date: Some("2025-07-28".to_string()),
+        date_time: None,
+        time_zone: None,
+    };
+    CalendarEventsClient::new(client)
+        .insert_event("primary", start, end)
+        .set_summary("test_insert")
+        .request()
+        .await
+        .unwrap();
+}
+
+async fn update_calendar_event(State(state): State<AppState>) {
+    let mut google_client_guard = state.google_client.lock().await;
+    let client = google_client_guard.as_mut().unwrap();
+    CalendarEventsClient::new(client)
+        .patch_event("primary", "3is75fqkn1uhcg5nu4bevdkfpe")
+        .set_summary("Gaat niet door")
+        .set_description("bah")
+        .request()
+        .await
+        .unwrap();
+}
+
 pub fn google_router() -> Router<AppState> {
     Router::new()
         .route("/calendar/events", axum::routing::get(get_calendar_events))
+        .route(
+            "/calendar/events/insert",
+            axum::routing::get(insert_calendar_event),
+        )
+        .route(
+            "/calendar/events/update",
+            axum::routing::get(update_calendar_event),
+        )
         .route("/auth", axum::routing::get(get_auth_url_workspace))
         // .route("/events", axum::routing::get(get_calendar_events))
         .route(

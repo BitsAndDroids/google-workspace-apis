@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::{anyhow, Error};
 use reqwest::Method;
 use serde::de::DeserializeOwned;
@@ -94,10 +92,6 @@ impl<'a> TasksClient<'a, Uninitialized> {
         builder.request.url =
             format!("https://tasks.googleapis.com/tasks/v1/lists/{task_list_id}/tasks/{task_id}");
         builder.request.method = reqwest::Method::PATCH;
-        let mut params: HashMap<String, String> = HashMap::new();
-        params.insert("task".to_string(), task_id.to_string());
-        params.insert("taskList".to_string(), task_list_id.to_string());
-        builder.request.params = params;
         let payload = serde_json::json!({
             "status": "completed"
         });
@@ -408,15 +402,8 @@ impl<'a> TasksClient<'a, TaskInsertMode> {
     ///
     /// # Returns
     /// * `Self` - Returns the client for method chaining
-    ///
-    /// # Panics
-    /// * If called before initializing the task
-    pub fn set_task_title(mut self, title: &str) -> Self {
-        match self.task {
-            Some(ref mut task) => task.title = title.to_string(),
-            None => panic!("Event not initialized for insertion"),
-        }
-        self
+    pub fn set_task_title(self, title: &str) -> Self {
+        self.modify_task(|task| task.title = title.to_string())
     }
 
     /// Sets the ETag of the task to be created.
@@ -426,15 +413,8 @@ impl<'a> TasksClient<'a, TaskInsertMode> {
     ///
     /// # Returns
     /// * `Self` - Returns the client for method chaining
-    ///
-    /// # Panics
-    /// * If called before initializing the task
-    pub fn set_task_etag(mut self, etag: &str) -> Self {
-        match self.task {
-            Some(ref mut task) => task.etag = etag.to_string(),
-            None => panic!("Event not initialized for insertion"),
-        }
-        self
+    pub fn set_task_etag(self, etag: &str) -> Self {
+        self.modify_task(|task| task.etag = etag.to_string())
     }
 
     /// Sets the notes describing the task.
@@ -444,15 +424,8 @@ impl<'a> TasksClient<'a, TaskInsertMode> {
     ///
     /// # Returns
     /// * `Self` - Returns the client for method chaining
-    ///
-    /// # Panics
-    /// * If called before initializing the task
-    pub fn set_task_notes(mut self, notes: &str) -> Self {
-        match self.task {
-            Some(ref mut task) => task.notes = notes.to_string(),
-            None => panic!("Event not initialized for insertion"),
-        }
-        self
+    pub fn set_task_notes(self, notes: &str) -> Self {
+        self.modify_task(|event| event.notes = notes.to_string())
     }
 
     /// Sets the due date of the task.
@@ -462,15 +435,8 @@ impl<'a> TasksClient<'a, TaskInsertMode> {
     ///
     /// # Returns
     /// * `Self` - Returns the client for method chaining
-    ///
-    /// # Panics
-    /// * If called before initializing the task
-    pub fn set_task_due(mut self, due: chrono::DateTime<chrono::Utc>) -> Self {
-        match self.task {
-            Some(ref mut task) => task.due = Some(due),
-            None => panic!("Event not initialized for insertion"),
-        }
-        self
+    pub fn set_task_due(self, due: chrono::DateTime<chrono::Utc>) -> Self {
+        self.modify_task(|task| task.due = Some(due))
     }
 
     /// Sets the completion date of the task.
@@ -480,15 +446,8 @@ impl<'a> TasksClient<'a, TaskInsertMode> {
     ///
     /// # Returns
     /// * `Self` - Returns the client for method chaining
-    ///
-    /// # Panics
-    /// * If called before initializing the task
-    pub fn set_task_completed(mut self, completed: chrono::DateTime<chrono::Utc>) -> Self {
-        match self.task {
-            Some(ref mut task) => task.completed = Some(completed),
-            None => panic!("Event not initialized for insertion"),
-        }
-        self
+    pub fn set_task_completed(self, completed: chrono::DateTime<chrono::Utc>) -> Self {
+        self.modify_task(|task| task.completed = Some(completed))
     }
 
     /// Sets the hidden status of the task.
@@ -498,15 +457,8 @@ impl<'a> TasksClient<'a, TaskInsertMode> {
     ///
     /// # Returns
     /// * `Self` - Returns the client for method chaining
-    ///
-    /// # Panics
-    /// * If called before initializing the task
-    pub fn set_task_hidden(mut self, hidden: bool) -> Self {
-        match self.task {
-            Some(ref mut task) => task.hidden = hidden,
-            None => panic!("Event not initialized for insertion"),
-        }
-        self
+    pub fn set_task_hidden(self, hidden: bool) -> Self {
+        self.modify_task(|task| task.hidden = hidden)
     }
 
     /// Sets the links associated with the task.
@@ -516,13 +468,16 @@ impl<'a> TasksClient<'a, TaskInsertMode> {
     ///
     /// # Returns
     /// * `Self` - Returns the client for method chaining
-    ///
-    /// # Panics
-    /// * If called before initializing the task
-    pub fn set_task_links(mut self, links: Vec<TaskLink>) -> Self {
-        match self.task {
-            Some(ref mut task) => task.links = links,
-            None => panic!("Event not initialized for insertion"),
+    pub fn set_task_links(self, links: Vec<TaskLink>) -> Self {
+        self.modify_task(|task| task.links = links)
+    }
+
+    fn modify_task<F>(mut self, modifier: F) -> Self
+    where
+        F: FnOnce(&mut Task),
+    {
+        if let Some(ref mut task) = self.task {
+            modifier(task);
         }
         self
     }
