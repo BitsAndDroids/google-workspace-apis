@@ -1,3 +1,7 @@
+use anyhow::{anyhow, Error};
+use reqwest::Method;
+use serde::de::DeserializeOwned;
+
 use crate::{auth::client::GoogleClient, utils::request::Request};
 
 use super::types::Message;
@@ -29,5 +33,75 @@ impl<'a> GmailClient<'a, ()> {
             format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/messages");
         builder.request.method = reqwest::Method::GET;
         builder
+    }
+}
+
+impl<'a, T> GmailClient<'a, T> {
+    pub(super) async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
+    where
+        R: DeserializeOwned,
+    {
+        self.request.client.refresh_acces_token_check().await?;
+        match self.request.method {
+            Method::GET => {
+                let res = self
+                    .request
+                    .client
+                    .req_client
+                    .get(&self.request.url)
+                    .query(&self.request.params)
+                    .send()
+                    .await?;
+
+                if res.status().is_success() {
+                    Ok(Some(res.json().await?))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            Method::POST => {
+                let res = self
+                    .request
+                    .client
+                    .req_client
+                    .post(&self.request.url)
+                    .body(serde_json::to_string(&self.message).unwrap())
+                    .query(&self.request.params)
+                    .send()
+                    .await?;
+
+                if res.status().is_success() {
+                    Ok(Some(res.json().await?))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            Method::PATCH => {
+                let res = self
+                    .request
+                    .client
+                    .req_client
+                    .patch(&self.request.url)
+                    .body(serde_json::to_string(&self.message).unwrap())
+                    .query(&self.request.params)
+                    .send()
+                    .await?;
+
+                if res.status().is_success() {
+                    Ok(Some(res.json().await?))
+                } else {
+                    Ok(None)
+                }
+            }
+            _ => Err(anyhow!("Unsupported HTTP method")),
+        }
+    }
+}
+
+impl<'a> GmailClient<'a, EmailListMode> {
+    pub async fn request(mut self) -> Result<Option<Vec<Message>>, Error> {
+        self.make_request().await
     }
 }
