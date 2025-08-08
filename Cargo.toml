@@ -11,6 +11,7 @@ license = "MIT"
 [features]
 calendar = []
 tasks = []
+gmail = []
 
 [lib]
 doctest = false

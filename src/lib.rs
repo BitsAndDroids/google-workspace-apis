@@ -21,6 +21,8 @@ pub mod tasks;
 
 /// Module for authentication and authorization
 pub mod auth;
+#[cfg(feature = "gmail")]
+pub mod gmail;
 
 /// Helper module for utility functions
 pub mod utils;
