@@ -267,31 +267,6 @@ pub struct ModifyMessageRequest {
     pub remove_label_ids: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
-pub struct BatchModifyMessagesRequest {
-    /**
-     * IDs of the messages to modify.
-     */
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub ids: Vec<String>,
-
-    /**
-     * Label IDs to add to the messages.
-     */
-    #[serde(skip_serializing_if = "Vec::is_empty", default, rename = "addLabelIds")]
-    pub add_label_ids: Vec<String>,
-
-    /**
-     * Label IDs to remove from the messages.
-     */
-    #[serde(
-        skip_serializing_if = "Vec::is_empty",
-        default,
-        rename = "removeLabelIds"
-    )]
-    pub remove_label_ids: Vec<String>,
-}
-
 impl MessagePartBody {
     pub fn new() -> Self {
         MessagePartBody {
