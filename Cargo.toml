@@ -12,6 +12,9 @@ license = "MIT"
 calendar = []
 tasks = []
 
+[lib]
+doctest = false
+
 [package.metadata.docs.rs]
 all-features = true
 
@@ -31,3 +34,4 @@ chrono = { version = "0.4", features = ["serde", "alloc"] }
 [dev-dependencies]
 axum = { version = "0.8.4", features = ["json", "macros", "tokio"] }
 tokio = { version = "1.44", features = ["rt-multi-thread"] }
+mockito = "1.7.0"

@@ -38,9 +38,9 @@ pub enum EventRequest {
 /// The generic type parameter `T` determines the mode of operation for this client,
 /// which affects which methods are available and what parameters can be set.
 pub struct CalendarEventsClient<'a, T = Uninitialized> {
-    request: Request<'a>,
-    event: Option<EventRequest>,
-    _mode: std::marker::PhantomData<T>,
+    pub(super) request: Request<'a>,
+    pub(super) event: Option<EventRequest>,
+    pub(super) _mode: std::marker::PhantomData<T>,
 }
 
 /// Implementation for the uninitialized event client.
@@ -326,7 +326,7 @@ impl<'a> CalendarEventsClient<'a, EventListMode> {
 }
 
 impl<'a, T> CalendarEventsClient<'a, T> {
-    async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
+    pub(super) async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
     where
         R: DeserializeOwned,
     {
