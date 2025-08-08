@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::{anyhow, Error};
 use reqwest::Method;
 use serde::de::DeserializeOwned;

@@ -10,7 +10,8 @@ use reqwest::Method;
 use serde::{de::DeserializeOwned, Serialize};
 
 use super::types::{
-    BirthdayProperties, Event, EventAttendee, EventList, OutOfOfficeProperties, PatchEventRequest,
+    BirthdayProperties, Event, EventAttendee, EventList, EventReminders, EventSource,
+    OutOfOfficeProperties, PatchEventRequest, WorkingLocationProperties,
 };
 
 /// Indicates that the request builder is not yet initialized with a specific mode.
@@ -120,6 +121,16 @@ impl<'a> CalendarEventsClient<'a, Uninitialized> {
         builder
     }
 
+    /// Patches a specific event in the specified calendar.
+    ///
+    /// # Arguments
+    ///
+    /// * `calendar_id` - The ID of the calendar where the event is located
+    /// * `event_id` - The ID of the event to modify
+    ///
+    /// # Returns
+    ///
+    /// A builder configured for patching an existing event
     pub fn patch_event(
         self,
         calendar_id: &str,
@@ -332,11 +343,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Panics
     ///
     /// Panics if the event has not been initialized for insertion
-    pub fn set_event_summary(mut self, summary: &str) -> Self {
-        if let Some(EventRequest::Create(ref mut event)) = self.event {
-            event.summary = Some(summary.to_string());
-        }
-        self
+    pub fn set_event_summary(self, summary: &str) -> Self {
+        self.modify_event(|event| event.summary = Some(summary.to_string()))
     }
 
     /// Sets the location for the event.
@@ -348,11 +356,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Panics
     ///
     /// Panics if the event has not been initialized for insertion
-    pub fn set_event_location(mut self, location: &str) -> Self {
-        if let Some(EventRequest::Create(ref mut event)) = self.event {
-            event.location = Some(location.to_string())
-        }
-        self
+    pub fn set_event_location(self, location: &str) -> Self {
+        self.modify_event(|event| event.location = Some(location.to_string()))
     }
 
     /// Sets the attendees for the event.
@@ -364,11 +369,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Panics
     ///
     /// Panics if the event has not been initialized for insertion
-    pub fn set_event_attendees(mut self, attendees: Vec<EventAttendee>) -> Self {
-        if let Some(EventRequest::Create(ref mut event)) = self.event {
-            event.attendees = attendees
-        }
-        self
+    pub fn set_event_attendees(self, attendees: Vec<EventAttendee>) -> Self {
+        self.modify_event(|event| event.attendees = attendees)
     }
 
     /// Sets the type of event.
@@ -380,11 +382,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Panics
     ///
     /// Panics if the event has not been initialized for insertion
-    pub fn set_event_type(mut self, type_: EventType) -> Self {
-        if let Some(EventRequest::Create(ref mut event)) = self.event {
-            event.event_type = Some(type_.as_str().to_string())
-        }
-        self
+    pub fn set_event_type(self, type_: EventType) -> Self {
+        self.modify_event(|event| event.event_type = Some(type_.as_str().to_string()))
     }
 
     /// Sets the birthday properties for the event.
@@ -396,11 +395,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Panics
     ///
     /// Panics if the event has not been initialized for insertion
-    pub fn set_birtday_properties(mut self, birtday_properties: BirthdayProperties) -> Self {
-        if let Some(EventRequest::Create(ref mut event)) = self.event {
-            event.birthday_properties = Some(birtday_properties)
-        }
-        self
+    pub fn set_birtday_properties(self, birtday_properties: BirthdayProperties) -> Self {
+        self.modify_event(|event| event.birthday_properties = Some(birtday_properties))
     }
 
     /// Sets the color ID for the event.
@@ -412,11 +408,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Panics
     ///
     /// Panics if the event has not been initialized for insertion
-    pub fn set_color_id(mut self, color_id: &str) -> Self {
-        if let Some(EventRequest::Create(ref mut event)) = self.event {
-            event.color_id = Some(color_id.to_string())
-        }
-        self
+    pub fn set_color_id(self, color_id: &str) -> Self {
+        self.modify_event(|event| event.color_id = Some(color_id.to_string()))
     }
 
     /// Sets whether guests can invite others to the event.
@@ -428,11 +421,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Panics
     ///
     /// Panics if the event has not been initialized for insertion
-    pub fn set_guests_can_invite_others(mut self, can_invite: bool) -> Self {
-        if let Some(EventRequest::Create(ref mut event)) = self.event {
-            event.guests_can_invite_others = Some(can_invite)
-        }
-        self
+    pub fn set_guests_can_invite_others(self, can_invite: bool) -> Self {
+        self.modify_event(|event| event.guests_can_invite_others = Some(can_invite))
     }
 
     /// Sets whether guests can modify the event.
@@ -444,11 +434,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Panics
     ///
     /// Panics if the event has not been initialized for insertion
-    pub fn set_guests_can_modify(mut self, can_modify: bool) -> Self {
-        if let Some(EventRequest::Create(ref mut event)) = self.event {
-            event.guests_can_modify = Some(can_modify)
-        }
-        self
+    pub fn set_guests_can_modify(self, can_modify: bool) -> Self {
+        self.modify_event(|event| event.guests_can_modify = Some(can_modify))
     }
 
     /// Sets whether guests can see other guests in the event.
@@ -460,11 +447,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Panics
     ///
     /// Panics if the event has not been initialized for insertion
-    pub fn set_guests_can_see_other_guests(mut self, can_see: bool) -> Self {
-        if let Some(EventRequest::Create(ref mut event)) = self.event {
-            event.guests_can_see_other_guests = Some(can_see)
-        }
-        self
+    pub fn set_guests_can_see_other_guests(self, can_see: bool) -> Self {
+        self.modify_event(|event| event.guests_can_see_other_guests = Some(can_see))
     }
 
     /// Sets the ID for the event.
@@ -476,11 +460,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Panics
     ///
     /// Panics if the event has not been initialized for insertion
-    pub fn set_id(mut self, id: &str) -> Self {
-        if let Some(EventRequest::Create(ref mut event)) = self.event {
-            event.id = Some(id.to_string())
-        }
-        self
+    pub fn set_id(self, id: &str) -> Self {
+        self.modify_event(|event| event.id = Some(id.to_string()))
     }
 
     /// Sets the out of office properties for the event.
@@ -493,13 +474,10 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// Panics if the event has not been initialized for insertion
     pub fn set_out_of_office_properties(
-        mut self,
+        self,
         out_of_office_properties: OutOfOfficeProperties,
     ) -> Self {
-        if let Some(EventRequest::Create(ref mut event)) = self.event {
-            event.out_of_office_properties = Some(out_of_office_properties)
-        }
-        self
+        self.modify_event(|event| event.out_of_office_properties = Some(out_of_office_properties))
     }
 
     /// Sets the recurrence rules for the event.
@@ -511,11 +489,8 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Panics
     ///
     /// Panics if the event has not been initialized for insertion
-    pub fn set_recurrence(mut self, recurrence: Vec<String>) -> Self {
-        if let Some(EventRequest::Create(ref mut event)) = self.event {
-            event.recurrence = recurrence
-        }
-        self
+    pub fn set_recurrence(self, recurrence: Vec<String>) -> Self {
+        self.modify_event(|event| event.recurrence = recurrence)
     }
 
     /// Executes the request to create the event.
@@ -528,6 +503,16 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     pub async fn request(&mut self) -> Result<Option<Event>, Error> {
         self.make_request().await
     }
+
+    fn modify_event<F>(mut self, modifier: F) -> Self
+    where
+        F: FnOnce(&mut CreateEventRequest),
+    {
+        if let Some(EventRequest::Create(ref mut event)) = self.event {
+            modifier(event);
+        }
+        self
+    }
 }
 
 impl<'a> CalendarEventsClient<'a, EventPatchMode> {
@@ -536,23 +521,221 @@ impl<'a> CalendarEventsClient<'a, EventPatchMode> {
     ///  # Arguments
     ///
     ///  * `end` - new EventDateTime format
-    pub fn set_end(mut self, end: EventDateTime) -> Self {
-        if let Some(EventRequest::Patch(ref mut event)) = self.event {
-            event.end = Some(end);
-        }
-        self
+    pub fn set_end(self, end: EventDateTime) -> Self {
+        self.modify_event(|event| event.end = Some(end))
     }
     /// Patch the start of the event
     ///  
     ///  # Arguments
     ///
     ///  * `start` - new EventDateTime format
-    pub fn set_start(mut self, start: EventDateTime) -> Self {
+    pub fn set_start(self, start: EventDateTime) -> Self {
+        self.modify_event(|event| event.start = Some(start))
+    }
+
+    /// Patch the summary of the event
+    ///
+    /// # Arguments
+    ///
+    /// * `summary` - new summary of the event
+    pub fn set_summary(self, summary: &str) -> Self {
+        self.modify_event(|event| event.summary = Some(summary.to_string()))
+    }
+
+    /// Patch the description of the event
+    ///
+    /// # Arguments
+    ///
+    /// * `description` - new description of the event
+    pub fn set_description(self, descr: &str) -> Self {
+        self.modify_event(|event| event.description = Some(descr.to_string()))
+    }
+
+    /// Patch the event type of the event
+    ///
+    /// # Arguments
+    ///
+    /// * `event_type` - the new EventType
+    ///  
+    /// pub enum EventType {
+    ///    Birthday,
+    ///    Default,
+    ///    FocusTime,
+    ///    FromGmail,
+    ///    OutOfOffice,
+    /// }
+    pub fn set_event_type(self, event_type: EventType) -> Self {
+        self.modify_event(|event| event.event_type = Some(event_type.as_str().to_string()))
+    }
+
+    /// Patch the guests_can_invite_others field
+    ///
+    /// # Arguments
+    ///
+    /// * `can_invite` - Boolean
+    ///  
+    /// This dictates if the guests can invite other attendees for this event
+    pub fn set_guests_can_invite_others(self, can_invite: bool) -> Self {
+        self.modify_event(|event| event.guests_can_invite_others = Some(can_invite))
+    }
+
+    /// Patch the guests_can_modify field
+    ///
+    /// # Arguments
+    ///
+    /// * `can_modify` - Boolean
+    ///  
+    /// This dictates if the guests can modify the event
+    pub fn set_guests_can_modify(self, can_modify: bool) -> Self {
+        self.modify_event(|event| event.guests_can_modify = Some(can_modify))
+    }
+
+    /// Patch the guests_can_see field
+    ///
+    /// # Arguments
+    ///
+    /// * `can_see` - Boolean
+    ///  
+    /// This dictates if the guests can see other guests
+    pub fn set_guests_can_see_other_guests(self, can_see: bool) -> Self {
+        self.modify_event(|event| event.guests_can_see_other_guests = Some(can_see))
+    }
+
+    /// Patch the id field
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - &str
+    ///  
+    /// Alters the id of the event
+    pub fn set_id(self, id: &str) -> Self {
+        self.modify_event(|event| event.id = Some(id.to_string()))
+    }
+
+    /// Patch the location field
+    ///
+    /// # Arguments
+    ///
+    /// * `location` - &str
+    ///  
+    /// Location of the event
+    pub fn set_location(self, location: &str) -> Self {
+        self.modify_event(|event| event.location = Some(location.to_string()))
+    }
+
+    /// Patch the out of office properties field
+    ///
+    /// # Arguments
+    ///
+    /// * `properties` - OutOfOfficeProperties
+    pub fn set_out_of_office_properties(self, properties: OutOfOfficeProperties) -> Self {
+        self.modify_event(|event| event.out_of_office_properties = Some(properties))
+    }
+
+    /// Patch the recurrence field
+    ///
+    /// # Arguments
+    ///
+    /// * `recurrence` - Vec<String>
+    pub fn set_recurrence(self, recurrence: Vec<String>) -> Self {
+        self.modify_event(|event| event.recurrence = recurrence)
+    }
+
+    /// Patch the reminders field
+    ///
+    /// # Arguments
+    ///
+    /// * `reminders` - EventReminders
+    pub fn set_reminders(self, reminders: EventReminders) -> Self {
+        self.modify_event(|event| event.reminders = Some(reminders))
+    }
+
+    /// Patch the sequence field
+    ///
+    /// # Arguments
+    ///
+    /// * `sequence` - i32
+    pub fn set_sequence(self, sequence: i32) -> Self {
+        self.modify_event(|event| event.sequence = Some(sequence))
+    }
+
+    /// Patch the source field
+    ///
+    /// # Arguments
+    ///
+    /// * `source` - EventSource
+    pub fn set_source(self, source: EventSource) -> Self {
+        self.modify_event(|event| event.source = Some(source))
+    }
+
+    /// Patch the status field
+    ///
+    /// # Arguments
+    ///
+    /// * `status` - &str
+    ///
+    /// Options are "confirmed", "tentative", "cancelled"
+    pub fn set_status(self, status: &str) -> Self {
+        self.modify_event(|event| event.status = Some(status.to_string()))
+    }
+
+    /// Patch the transparancy field
+    ///
+    /// # Arguments
+    ///
+    /// * `transparancy` - &str
+    ///
+    /// Options are "opaque" (does block time on the calendar) or "transparant" (does not block
+    /// time on the calendar)"
+    pub fn set_transparancy(self, transparancy: &str) -> Self {
+        self.modify_event(|event| event.transparency = Some(transparancy.to_string()))
+    }
+
+    /// Patch the visibility field
+    ///
+    /// # Arguments
+    ///
+    /// * `visibility` - &str
+    ///
+    /// Options are "default", "public" (all readers of the calendar), "private" (only attendees
+    /// may view event details), "confidential" (same as private added compatibility reasons)
+    pub fn set_visibility(self, visibility: &str) -> Self {
+        self.modify_event(|event| event.visibility = Some(visibility.to_string()))
+    }
+
+    /// Patch the working location properties field
+    ///
+    /// # Arguments
+    ///
+    /// * `properties` - WorkingLocationProperties
+    pub fn set_working_location_properties(self, properties: WorkingLocationProperties) -> Self {
+        self.modify_event(|event| event.working_location_properties = Some(properties))
+    }
+
+    /// Set the query parameter sendUpdates
+    ///
+    /// # Arguments
+    ///
+    /// * `send` - &str
+    ///
+    /// options are "all", "externalOnly", "none"
+    pub fn send_updates(mut self, send: &str) -> Self {
+        self.request
+            .params
+            .insert("sendUpdates".to_string(), send.to_string());
+        self
+    }
+
+    fn modify_event<F>(mut self, modifier: F) -> Self
+    where
+        F: FnOnce(&mut PatchEventRequest),
+    {
         if let Some(EventRequest::Patch(ref mut event)) = self.event {
-            event.start = Some(start);
+            modifier(event);
         }
         self
     }
+
     /// Executes the request to create the event.
     ///
     /// # Returns
