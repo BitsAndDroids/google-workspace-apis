@@ -1,4 +1,4 @@
-pub mod requests;
 #[cfg(test)]
-mod tests;
+mod request_tests;
+pub mod requests;
 pub mod types;
