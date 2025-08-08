@@ -263,6 +263,36 @@ fn patch_event_setters_apply() {
     }
 }
 
+#[test]
+fn serialized_event_body_matches_expected_format() {
+    let mut gc = dummy_google_client_valid();
+
+    let new_start = sample_dt("2026-02-01");
+    let new_end = sample_dt("2026-02-02");
+
+    let builder = CalendarEventsClient::new(&mut gc)
+        .patch_event("primary", "evt_42")
+        .set_summary("New title")
+        .set_description("New desc")
+        .set_start(new_start)
+        .set_end(new_end);
+
+    // Serialize the event object
+    let event = builder.event.as_ref().unwrap();
+    let serialized = serde_json::to_string(&event).unwrap();
+
+    // Parse it back to verify structure
+    let parsed: serde_json::Value = serde_json::from_str(&serialized).unwrap();
+
+    assert_eq!(parsed.as_object().unwrap().len(), 4);
+
+    // Check that serialized JSON contains expected fields with correct values
+    assert_eq!(parsed["summary"], "New title");
+    assert_eq!(parsed["description"], "New desc");
+    assert_eq!(parsed["start"]["date"], "2026-02-01");
+    assert_eq!(parsed["end"]["date"], "2026-02-02");
+}
+
 #[tokio::test]
 async fn make_request_unsupported_method_errors() {
     let mut gc = dummy_google_client_valid();
