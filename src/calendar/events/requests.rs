@@ -805,7 +805,6 @@ impl<'a> CalendarEventsClient<'a, EventPatchMode> {
     }
 
     /// Set the maxAttendees query parameter
-    ///
     /// `The maximum number of attendees to include in the response.
     /// If there are more than the specified number of attendees, only the participant is returned.
     /// Optional.`
