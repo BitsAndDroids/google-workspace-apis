@@ -56,7 +56,7 @@ impl<'a> CalendarEventsClient<'a, Uninitialized> {
     }
     /// Get a list of events from the specified calendar.
     /// # Examples
-    /// ```
+    /// ``` rust
     /// #[axum::debug_handler]
     /// pub async fn get_birtday_events(State(state): State<AppState>) -> Json<EventResponse> {
     ///     //GoogleClient is stored in the AppState wrapped in a Arc<Mutex>
@@ -104,6 +104,29 @@ impl<'a> CalendarEventsClient<'a, Uninitialized> {
     /// # Returns
     ///
     /// A builder configured for inserting a new event
+    ///
+    /// #Examples
+    /// ```rust
+    /// pub async fn insert_new_event(State(state): State<AppState>) {
+    ///     let mut google_client_guard = state.google_client.lock().await;
+    ///     let client = google_client_guard.as_mut().unwrap();
+    ///     let start: EventDateTime = EventDateTime {
+    ///         date: Some("2025-07-28".to_string()),
+    ///         date_time: None,
+    ///         time_zone: None,
+    ///     };
+    ///     let end: EventDateTime = EventDateTime {
+    ///         date: Some("2025-07-28".to_string()),
+    ///         date_time: None,
+    ///         time_zone: None,
+    ///     };
+    ///     CalendarEventsClient::new(client)
+    ///         .insert_event("calendar_id", start, end)
+    ///         .set_summary("test_insert")
+    ///         .set_description("new event")
+    ///         .request()
+    ///         .await;
+    /// }
     pub fn insert_event(
         self,
         calendar_id: &str,
@@ -131,6 +154,21 @@ impl<'a> CalendarEventsClient<'a, Uninitialized> {
     /// # Returns
     ///
     /// A builder configured for patching an existing event
+    ///
+    /// ``` rust
+    ///     async fn update_event(State(state): State<AppState>) {
+    ///     let mut google_client_guard = state.google_client.lock().await;
+    ///     let client = google_client_guard.as_mut().unwrap();
+    ///     CalendarEventsClient::new(client)
+    ///      // Main callendar can be targetd by the string "primary" as id
+    ///      .patch_event("calendar_id", "event_id")
+    ///      .set_summary("New summary/title")
+    ///      .set_description("New description")
+    ///      .request()
+    ///      .await
+    ///      .unwrap();
+    ///     }
+    /// ```
     pub fn patch_event(
         self,
         calendar_id: &str,
@@ -328,6 +366,24 @@ impl<'a, T> CalendarEventsClient<'a, T> {
                     Ok(None)
                 }
             }
+
+            Method::PATCH => {
+                let res = self
+                    .request
+                    .client
+                    .req_client
+                    .patch(&self.request.url)
+                    .body(serde_json::to_string(&self.event).unwrap())
+                    .query(&self.request.params)
+                    .send()
+                    .await?;
+
+                if res.status().is_success() {
+                    Ok(Some(res.json().await?))
+                } else {
+                    Ok(None)
+                }
+            }
             _ => Err(anyhow!("Unsupported HTTP method")),
         }
     }
@@ -340,11 +396,17 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// * `summary` - The summary text to set for the event
     ///
-    /// # Panics
-    ///
-    /// Panics if the event has not been initialized for insertion
-    pub fn set_event_summary(self, summary: &str) -> Self {
+    pub fn set_summary(self, summary: &str) -> Self {
         self.modify_event(|event| event.summary = Some(summary.to_string()))
+    }
+
+    /// Sets the description of the event being created.
+    ///
+    /// # Arguments
+    ///
+    /// * `description` - The summary text to set for the event
+    pub fn set_description(self, descr: &str) -> Self {
+        self.modify_event(|event| event.description = Some(descr.to_string()))
     }
 
     /// Sets the location for the event.
@@ -352,11 +414,7 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Arguments
     ///
     /// * `location` - The location text to set for the event
-    ///
-    /// # Panics
-    ///
-    /// Panics if the event has not been initialized for insertion
-    pub fn set_event_location(self, location: &str) -> Self {
+    pub fn set_location(self, location: &str) -> Self {
         self.modify_event(|event| event.location = Some(location.to_string()))
     }
 
@@ -365,11 +423,7 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Arguments
     ///
     /// * `attendees` - A vector of EventAttendee objects representing the event attendees
-    ///
-    /// # Panics
-    ///
-    /// Panics if the event has not been initialized for insertion
-    pub fn set_event_attendees(self, attendees: Vec<EventAttendee>) -> Self {
+    pub fn set_attendees(self, attendees: Vec<EventAttendee>) -> Self {
         self.modify_event(|event| event.attendees = attendees)
     }
 
@@ -379,10 +433,14 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     ///
     /// * `type_` - The EventType to set for the event
     ///
-    /// # Panics
-    ///
-    /// Panics if the event has not been initialized for insertion
-    pub fn set_event_type(self, type_: EventType) -> Self {
+    /// pub enum EventType {
+    ///    Birthday,
+    ///    Default,
+    ///    FocusTime,
+    ///    FromGmail,
+    ///    OutOfOffice,
+    /// }
+    pub fn set_type(self, type_: EventType) -> Self {
         self.modify_event(|event| event.event_type = Some(type_.as_str().to_string()))
     }
 
@@ -391,10 +449,6 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Arguments
     ///
     /// * `birtday_properties` - The BirthdayProperties to set for the event
-    ///
-    /// # Panics
-    ///
-    /// Panics if the event has not been initialized for insertion
     pub fn set_birtday_properties(self, birtday_properties: BirthdayProperties) -> Self {
         self.modify_event(|event| event.birthday_properties = Some(birtday_properties))
     }
@@ -404,10 +458,6 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Arguments
     ///
     /// * `color_id` - The color ID to set for the event
-    ///
-    /// # Panics
-    ///
-    /// Panics if the event has not been initialized for insertion
     pub fn set_color_id(self, color_id: &str) -> Self {
         self.modify_event(|event| event.color_id = Some(color_id.to_string()))
     }
@@ -417,10 +467,6 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Arguments
     ///
     /// * `can_invite` - Boolean indicating if guests can invite others
-    ///
-    /// # Panics
-    ///
-    /// Panics if the event has not been initialized for insertion
     pub fn set_guests_can_invite_others(self, can_invite: bool) -> Self {
         self.modify_event(|event| event.guests_can_invite_others = Some(can_invite))
     }
@@ -430,10 +476,6 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Arguments
     ///
     /// * `can_modify` - Boolean indicating if guests can modify the event
-    ///
-    /// # Panics
-    ///
-    /// Panics if the event has not been initialized for insertion
     pub fn set_guests_can_modify(self, can_modify: bool) -> Self {
         self.modify_event(|event| event.guests_can_modify = Some(can_modify))
     }
@@ -443,10 +485,6 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Arguments
     ///
     /// * `can_see` - Boolean indicating if guests can see other guests
-    ///
-    /// # Panics
-    ///
-    /// Panics if the event has not been initialized for insertion
     pub fn set_guests_can_see_other_guests(self, can_see: bool) -> Self {
         self.modify_event(|event| event.guests_can_see_other_guests = Some(can_see))
     }
@@ -456,10 +494,6 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Arguments
     ///
     /// * `id` - The ID to set for the event
-    ///
-    /// # Panics
-    ///
-    /// Panics if the event has not been initialized for insertion
     pub fn set_id(self, id: &str) -> Self {
         self.modify_event(|event| event.id = Some(id.to_string()))
     }
@@ -469,10 +503,6 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Arguments
     ///
     /// * `out_of_office_properties` - The OutOfOfficeProperties to set for the event
-    ///
-    /// # Panics
-    ///
-    /// Panics if the event has not been initialized for insertion
     pub fn set_out_of_office_properties(
         self,
         out_of_office_properties: OutOfOfficeProperties,
@@ -485,10 +515,6 @@ impl<'a> CalendarEventsClient<'a, EventInsertMode> {
     /// # Arguments
     ///
     /// * `recurrence` - A vector of strings containing the recurrence rules in iCalendar RFC 5545 format
-    ///
-    /// # Panics
-    ///
-    /// Panics if the event has not been initialized for insertion
     pub fn set_recurrence(self, recurrence: Vec<String>) -> Self {
         self.modify_event(|event| event.recurrence = recurrence)
     }
@@ -524,6 +550,7 @@ impl<'a> CalendarEventsClient<'a, EventPatchMode> {
     pub fn set_end(self, end: EventDateTime) -> Self {
         self.modify_event(|event| event.end = Some(end))
     }
+
     /// Patch the start of the event
     ///  
     ///  # Arguments
@@ -549,6 +576,27 @@ impl<'a> CalendarEventsClient<'a, EventPatchMode> {
     /// * `description` - new description of the event
     pub fn set_description(self, descr: &str) -> Self {
         self.modify_event(|event| event.description = Some(descr.to_string()))
+    }
+
+    /// Patch the attendees of the event
+    ///
+    /// # Arguments
+    ///
+    /// * `attendees` - Vec<EventAttendee>
+    ///  
+    /// This will overwrite the existing attendee list.
+    /// Previous entries aren't appended
+    pub fn set_attendees(self, attendees: Vec<EventAttendee>) -> Self {
+        self.modify_event(|event| event.attendees = attendees)
+    }
+
+    /// Patch the color_id of the event
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - &str
+    pub fn set_color_id(self, id: &str) -> Self {
+        self.modify_event(|event| event.color_id = Some(id.to_string()))
     }
 
     /// Patch the event type of the event
@@ -637,6 +685,9 @@ impl<'a> CalendarEventsClient<'a, EventPatchMode> {
     /// # Arguments
     ///
     /// * `recurrence` - Vec<String>
+    ///  
+    /// This will overwrite the existing attendee list.
+    /// Previous entries aren't appended
     pub fn set_recurrence(self, recurrence: Vec<String>) -> Self {
         self.modify_event(|event| event.recurrence = recurrence)
     }
@@ -646,6 +697,9 @@ impl<'a> CalendarEventsClient<'a, EventPatchMode> {
     /// # Arguments
     ///
     /// * `reminders` - EventReminders
+    ///  
+    /// This will overwrite the existing attendee list.
+    /// Previous entries aren't appended
     pub fn set_reminders(self, reminders: EventReminders) -> Self {
         self.modify_event(|event| event.reminders = Some(reminders))
     }
@@ -719,10 +773,46 @@ impl<'a> CalendarEventsClient<'a, EventPatchMode> {
     /// * `send` - &str
     ///
     /// options are "all", "externalOnly", "none"
-    pub fn send_updates(mut self, send: &str) -> Self {
+    pub fn set_send_updates(mut self, send: &str) -> Self {
         self.request
             .params
             .insert("sendUpdates".to_string(), send.to_string());
+        self
+    }
+
+    /// Set the conference data version query parameter
+    ///  
+    ///`Version number of conference data supported by the API client.
+    ///Version 0 assumes no conference data support and ignores conference data in the event's body.
+    ///Version 1 enables support for copying of ConferenceData as well as for creating new conferences using the createRequest field of conferenceData.
+    ///The default is 0. Acceptable values are 0 to 1, inclusive.`
+    pub fn set_conference_data_version(mut self, v: i8) -> Self {
+        self.request
+            .params
+            .insert("conferenceDataVersion".to_string(), v.to_string());
+        self
+    }
+    /// Set the maxAttendees query parameter
+    ///  
+    ///`Whether API client performing operation supports event attachments.
+    ///Optional.
+    ///The default is False.`
+    pub fn support_attachments(mut self, support: bool) -> Self {
+        self.request
+            .params
+            .insert("supportAttachments".to_string(), support.to_string());
+        self
+    }
+
+    /// Set the maxAttendees query parameter
+    ///
+    /// `The maximum number of attendees to include in the response.
+    /// If there are more than the specified number of attendees, only the participant is returned.
+    /// Optional.`
+    pub fn set_max_attendees(mut self, v: i16) -> Self {
+        self.request
+            .params
+            .insert("maxAttendees".to_string(), v.to_string());
         self
     }
 
