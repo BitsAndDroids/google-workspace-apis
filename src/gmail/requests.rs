@@ -4,9 +4,10 @@ use serde::de::DeserializeOwned;
 
 use crate::{auth::client::GoogleClient, utils::request::Request};
 
-use super::types::Message;
+use super::types::{Message, MessageList};
 
 pub struct EmailListMode;
+pub struct EmailGetMode;
 
 pub struct GmailClient<'a, T> {
     pub(super) request: Request<'a>,
@@ -31,6 +32,18 @@ impl<'a> GmailClient<'a, ()> {
         };
         builder.request.url =
             format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/messages");
+        builder.request.method = reqwest::Method::GET;
+        builder
+    }
+
+    pub fn get_email(self, user_id: &str, email_id: &str) -> GmailClient<'a, EmailGetMode> {
+        let mut builder = GmailClient {
+            request: self.request,
+            message: None,
+            _mode: std::marker::PhantomData,
+        };
+        builder.request.url =
+            format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/messages/{email_id}");
         builder.request.method = reqwest::Method::GET;
         builder
     }
@@ -101,7 +114,13 @@ impl<'a, T> GmailClient<'a, T> {
 }
 
 impl<'a> GmailClient<'a, EmailListMode> {
-    pub async fn request(mut self) -> Result<Option<Vec<Message>>, Error> {
+    pub async fn request(mut self) -> Result<Option<MessageList>, Error> {
+        self.make_request().await
+    }
+}
+
+impl<'a> GmailClient<'a, EmailGetMode> {
+    pub async fn request(mut self) -> Result<Option<Message>, Error> {
         self.make_request().await
     }
 }
