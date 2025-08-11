@@ -15,6 +15,8 @@ Current supported APIs include: Google Tasks, Google Calendar, and Gmail.
 ```rust
     // If the last parameter is set to true the client
     // will automatically refresh the access token if it expires
+    // The access token is retrieved by the Google auth callback
+    // See the axum_calendar_example.rs example for a full example
     let new_client = GoogleClient::new(client_credentials, access_token, true);
 
     // Insert a task
