@@ -212,7 +212,7 @@ impl<'a> TasksClient<'a, Uninitialized> {
 
 impl<'a, T> TasksClient<'a, T> {
     pub(super) async fn make_delete_request(&mut self) -> Result<bool, Error> {
-        self.request.client.refresh_acces_token_check().await?;
+        self.request.client.refresh_access_token_check().await?;
         let res = self
             .request
             .client
@@ -232,7 +232,7 @@ impl<'a, T> TasksClient<'a, T> {
     where
         R: DeserializeOwned,
     {
-        self.request.client.refresh_acces_token_check().await?;
+        self.request.client.refresh_access_token_check().await?;
         match self.request.method {
             Method::GET => {
                 let res = self

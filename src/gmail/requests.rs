@@ -198,7 +198,7 @@ impl<'a> GmailClient<'a, ()> {
 
 impl<'a, T> GmailClient<'a, T> {
     pub(super) async fn delete_request(&mut self) -> Result<(), Error> {
-        self.request.client.refresh_acces_token_check().await?;
+        self.request.client.refresh_access_token_check().await?;
         let res = self
             .request
             .client
@@ -216,7 +216,7 @@ impl<'a, T> GmailClient<'a, T> {
     }
 
     pub(super) async fn trash_request(&mut self) -> Result<(), Error> {
-        self.request.client.refresh_acces_token_check().await?;
+        self.request.client.refresh_access_token_check().await?;
         let res = self
             .request
             .client
@@ -237,7 +237,7 @@ impl<'a, T> GmailClient<'a, T> {
     where
         R: DeserializeOwned,
     {
-        self.request.client.refresh_acces_token_check().await?;
+        self.request.client.refresh_access_token_check().await?;
         match self.request.method {
             Method::GET => {
                 let res = self

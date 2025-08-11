@@ -156,7 +156,7 @@ impl GoogleClient {
         self.refresh_handlers.push(Arc::new(handler));
     }
 
-    pub async fn refresh_acces_token_check(&mut self) -> Result<(), Error> {
+    pub async fn refresh_access_token_check(&mut self) -> Result<(), Error> {
         if self.auto_refresh_token && !self.is_access_token_valid() {
             self.update_access_token().await?;
         }
