@@ -301,3 +301,6 @@ impl Default for MessagePart {
         Self::new()
     }
 }
+
+pub enum GetMessageFormat {}
+//TODO: finish format enum https://developers.google.com/workspace/gmail/api/reference/rest/v1/Format
