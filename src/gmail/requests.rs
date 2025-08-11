@@ -27,7 +27,12 @@ impl<'a> GmailClient<'a, ()> {
     }
 
     /// Get a list of emails from the specified user_id.
+    ///  
     /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///  
     /// ``` rust
     /// pub async fn get_emails(State(state): State<AppState>) -> Json<MessageList> {
     ///     //GoogleClient is stored in the AppState wrapped in a Arc<Mutex>
@@ -57,7 +62,12 @@ impl<'a> GmailClient<'a, ()> {
     }
 
     /// Get a specific email by user_id and email_id.
+    ///  
     /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///  
     /// ```rust
     /// pub async fn get_email(State(state): State<AppState>, Path((user_id, email_id)):
     /// Path<(String, String)>) -> Json<Message> {
@@ -87,7 +97,12 @@ impl<'a> GmailClient<'a, ()> {
     /// Delete a specific email by user_id and email_id.
     /// This will completely remove the email from the user's mailbox (not moved to trash).
     /// Use trash_email instead if you want to move it to the trash.
+    ///  
     /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///  
     /// ```rust
     /// pub async fn delete_email(State(state): State<AppState>, Path((user_id, email_id)):
     /// Path<(String, String)>) -> Json<()> {
@@ -98,7 +113,8 @@ impl<'a> GmailClient<'a, ()> {
     ///   let res = GmailClient::new(client)
     ///   // "me" is a special value that refers to the authenticated user when used as user_id
     ///   .delete_email(&user_id, &email_id)
-    ///   .request()
+    ///   .request().await.unwrap();
+    /// }
     ///```
     pub fn delete_email(self, user_id: &str, email_id: &str) -> GmailClient<'a, EmailDeleteMode> {
         let mut builder = GmailClient {
@@ -115,6 +131,10 @@ impl<'a> GmailClient<'a, ()> {
     /// Trash a specific email by user_id and email_id.
     /// This will move the email to the trash folder, allowing it to be restored later.
     /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///  
     /// ```rust
     /// pub async fn trash_email(State(state): State<AppState>, Path((user_id, email_id)):
     /// Path<(String, String)>) -> Json<()> {
@@ -125,7 +145,8 @@ impl<'a> GmailClient<'a, ()> {
     ///   let res = GmailClient::new(client)
     ///   // "me" is a special value that refers to the authenticated user when used as user_id
     ///   .trash_email(&user_id, &email_id)
-    ///   .request()
+    ///   .request().await.unwrap();
+    /// }
     ///```
     pub fn trash_email(self, user_id: &str, email_id: &str) -> GmailClient<'a, EmailDeleteMode> {
         let mut builder = GmailClient {
@@ -142,7 +163,12 @@ impl<'a> GmailClient<'a, ()> {
 
     /// Untrash a specific email by user_id and email_id.
     /// This will move the email from the trash folder, restoring it.
+    ///  
     /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///  
     /// ```rust
     /// pub async fn untrash_email(State(state): State<AppState>, Path((user_id, email_id)):
     /// Path<(String, String)>) -> Json<()> {
@@ -153,7 +179,8 @@ impl<'a> GmailClient<'a, ()> {
     ///   let res = GmailClient::new(client)
     ///   // "me" is a special value that refers to the authenticated user when used as user_id
     ///   .untrash_email(&user_id, &email_id)
-    ///   .request()
+    ///   .request().await.unwrap();
+    /// }
     ///```
     pub fn untrash_email(self, user_id: &str, email_id: &str) -> GmailClient<'a, EmailDeleteMode> {
         let mut builder = GmailClient {

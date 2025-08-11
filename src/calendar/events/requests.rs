@@ -59,6 +59,10 @@ impl<'a> CalendarEventsClient<'a, Uninitialized> {
     }
     /// Get a list of events from the specified calendar.
     /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///  
     /// ``` rust
     /// #[axum::debug_handler]
     /// pub async fn get_birtday_events(State(state): State<AppState>) -> Json<EventResponse> {
@@ -109,6 +113,10 @@ impl<'a> CalendarEventsClient<'a, Uninitialized> {
     /// A builder configured for inserting a new event
     ///
     /// #Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///  
     /// ```rust
     /// pub async fn insert_new_event(State(state): State<AppState>) {
     ///     let mut google_client_guard = state.google_client.lock().await;
@@ -157,6 +165,11 @@ impl<'a> CalendarEventsClient<'a, Uninitialized> {
     /// # Returns
     ///
     /// A builder configured for patching an existing event
+    ///  
+    ///  # Examples
+    ///   
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
     ///
     /// ``` rust
     ///     async fn update_event(State(state): State<AppState>) {
