@@ -15,6 +15,7 @@ use super::{
 pub struct Uninitialized;
 pub struct TaskListMode;
 pub struct TaskInsertMode;
+pub struct TaskDeleteMode;
 pub struct TasksMode;
 pub struct TaskPatchMode;
 
@@ -98,9 +99,38 @@ impl<'a> TasksClient<'a, Uninitialized> {
         builder.request.body = Some(serde_json::to_string(&payload).unwrap());
         builder
     }
+
+    pub fn delete_task(self, task_id: &str, task_list_id: &str) -> TasksClient<'a, TaskDeleteMode> {
+        let mut builder = TasksClient {
+            request: self.request,
+            task: None,
+            _mode: std::marker::PhantomData,
+        };
+        builder.request.url =
+            format!("https://tasks.googleapis.com/tasks/v1/lists/{task_list_id}/tasks/{task_id}");
+        builder.request.method = reqwest::Method::DELETE;
+        builder
+    }
 }
 
 impl<'a, T> TasksClient<'a, T> {
+    pub(super) async fn make_delete_request(&mut self) -> Result<bool, Error> {
+        self.request.client.refresh_acces_token_check().await?;
+        let res = self
+            .request
+            .client
+            .req_client
+            .delete(&self.request.url)
+            .query(&self.request.params)
+            .send()
+            .await?;
+
+        if res.status().is_success() {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
     async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
     where
         R: DeserializeOwned,
@@ -491,5 +521,15 @@ impl<'a> TasksClient<'a, TaskPatchMode> {
     ///   or an error if the request failed.
     pub async fn request(&mut self) -> Result<Option<Task>, Error> {
         self.make_request().await
+    }
+}
+
+impl<'a> TasksClient<'a, TaskDeleteMode> {
+    /// Makes a request to delete the specified task.
+    ///
+    /// # Returns
+    /// * `Result<bool, Error>` - A result indicating whether the deletion was successful.
+    pub async fn request(&mut self) -> Result<bool, Error> {
+        self.make_delete_request().await
     }
 }

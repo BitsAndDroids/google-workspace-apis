@@ -24,6 +24,9 @@ pub struct EventGetMode;
 pub struct EventListMode;
 /// Indicates that the request builder is initialized for inserting events.
 /// This struct determines which filters can be applied to the request.
+pub struct EventDeleteMode;
+/// Indicates that the request builder is initialized for inserting events.
+/// This struct determines which filters can be applied to the request.
 pub struct EventInsertMode;
 
 pub struct EventPatchMode;
@@ -185,6 +188,23 @@ impl<'a> CalendarEventsClient<'a, Uninitialized> {
         builder.request.method = Method::PATCH;
         builder
     }
+
+    pub fn delete_event(
+        self,
+        calendar_id: &str,
+        event_id: &str,
+    ) -> CalendarEventsClient<'a, EventDeleteMode> {
+        let mut builder = CalendarEventsClient {
+            request: self.request,
+            event: None,
+            _mode: std::marker::PhantomData,
+        };
+        builder.request.url = format!(
+            "https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}"
+        );
+        builder.request.method = Method::DELETE;
+        builder
+    }
 }
 
 /// Event ordering options for Google Calendar events.
@@ -326,6 +346,23 @@ impl<'a> CalendarEventsClient<'a, EventListMode> {
 }
 
 impl<'a, T> CalendarEventsClient<'a, T> {
+    pub(super) async fn make_delete_request(&mut self) -> Result<bool, Error> {
+        self.request.client.refresh_acces_token_check().await?;
+        let res = self
+            .request
+            .client
+            .req_client
+            .delete(&self.request.url)
+            .query(&self.request.params)
+            .send()
+            .await?;
+
+        if res.status().is_success() {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
     pub(super) async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
     where
         R: DeserializeOwned,
@@ -384,6 +421,7 @@ impl<'a, T> CalendarEventsClient<'a, T> {
                     Ok(None)
                 }
             }
+
             _ => Err(anyhow!("Unsupported HTTP method")),
         }
     }
@@ -834,5 +872,33 @@ impl<'a> CalendarEventsClient<'a, EventPatchMode> {
     /// * `Err` - If there was an error making the request
     pub async fn request(&mut self) -> Result<Option<Event>, Error> {
         self.make_request().await
+    }
+}
+
+impl<'a> CalendarEventsClient<'a, EventDeleteMode> {
+    /// Executes the request to delete the event.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<bool, Error>` - A result indicating whether the deletion was successful.
+    pub async fn request(&mut self) -> Result<(), Error> {
+        match self.make_delete_request().await {
+            Ok(true) => Ok(()),
+            Ok(false) => Err(anyhow::anyhow!("Failed to delete event")),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Guests who should receive notifications about the deletion of the event.
+    /// Acceptable values are:
+    ///
+    /// "all": Notifications are sent to all guests.
+    /// "externalOnly": Notifications are sent to non-Google Calendar guests only.
+    /// "none": No notifications are sent. For calendar migration tasks, consider using the Events.import method instead.
+    pub fn send_updates(mut self, send: &str) -> Self {
+        self.request
+            .params
+            .insert("sendUpdates".to_string(), send.to_string());
+        self
     }
 }
