@@ -117,6 +117,34 @@ impl<'a> GmailClient<'a, EmailListMode> {
     pub async fn request(mut self) -> Result<Option<MessageList>, Error> {
         self.make_request().await
     }
+
+    pub fn include_spam_trash(mut self, incl: bool) -> Self {
+        self.request
+            .params
+            .insert("includeSpamTrash".to_string(), incl.to_string());
+        self
+    }
+
+    pub fn page_token(mut self, token: i32) -> Self {
+        self.request
+            .params
+            .insert("pageToken".to_string(), token.to_string());
+        self
+    }
+
+    pub fn max_results(mut self, max: u32) -> Self {
+        self.request
+            .params
+            .insert("maxResults".to_string(), max.to_string());
+        self
+    }
+
+    pub fn query(mut self, query: &str) -> Self {
+        self.request
+            .params
+            .insert("q".to_string(), query.to_string());
+        self
+    }
 }
 
 impl<'a> GmailClient<'a, EmailGetMode> {
