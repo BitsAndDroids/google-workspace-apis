@@ -98,6 +98,10 @@ The actions that are currently supported by this crate are:
 - Trash
 - Untrash
 
+#### Patch (tasks API)
+
+- Complete a task
+
 ## Features
 
 To include the correct API client,
