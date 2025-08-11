@@ -54,6 +54,9 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
+// This holds the configuration for the Google OAuth2 client
+// They can be generated when creating a new OAuth2 client in
+// the [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
 pub struct Config {
     google_client_id: &'static str,
     google_client_secret: &'static str,
@@ -64,6 +67,8 @@ pub async fn get_auth_url_workspace() -> String {
     let google_cfg = Config {
         google_client_id: "",
         google_client_secret: "",
+        //This reqirect URI must be added in the Google Cloud Console
+        //it should match the endpoint used in the handle_google_oauth_redirect function
         google_redirect_uri: "http://localhost:8080/api/v1/google/oauth2/redirect",
     };
 

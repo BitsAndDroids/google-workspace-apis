@@ -8,11 +8,15 @@ The current workspace crate landscape is highly fragmented,
 with each API employing a distinct approach.
 This library aims to provide a unified interface for all Google Workspace APIs.
 
+Current supported APIs include: Google Tasks, Google Calendar, and Gmail.
+
 ## Example
 
 ```rust
     // If the last parameter is set to true the client
     // will automatically refresh the access token if it expires
+    // The access token is retrieved by the Google auth callback
+    // See the axum_calendar_example.rs example for a full example
     let new_client = GoogleClient::new(client_credentials, access_token, true);
 
     // Insert a task
@@ -56,17 +60,12 @@ For the API documentation, see the [Calender API documentation](https://develope
 
 The actions that are currently supported by this crate are:
 
-#### Get (calendar API)
+#### Events (calendar API)
 
-- Events (returns a list of events for a specified calendar)
-
-#### Insert (calendar API)
-
-- Insert event in specified calendar
-
-#### Patch (calendar API)
-
-- Patch fields of an event
+- Get
+- List
+- Patch
+- Delete
 
 ### Tasks
 
@@ -74,14 +73,30 @@ For the API documentation, see the [Tasks API documentation](https://developers.
 
 The actions that are currently supported by this crate are:
 
-#### Get (tasks API)
+#### Tasks
 
-- Tasklists (returns a list of task lists for the authenticated user)
-- Tasks (returns a list of tasks for a specified task list)
+- Insert
+- List
+- Delete
+- Patch
 
-#### Insert (tasks API)
+#### Tasklists
 
-- Task (inserts a new task in a specified task list)
+- Get
+
+### Gmail
+
+For the API documentation, see the [Gmail API documentation](https://developers.google.com/workspace/gmail/api/guides).
+
+The actions that are currently supported by this crate are:
+
+#### User messages (emails)
+
+- Get
+- List
+- Delete
+- Trash
+- Untrash
 
 #### Patch (tasks API)
 
@@ -93,5 +108,5 @@ To include the correct API client,
 you need to define the feature in your `Cargo.toml` file:
 
 ```toml
-google-workspaces-api = { version: "1.0", features = ["calendar", "tasks"] }
+google-workspaces-api = { version: "1.2", features = ["calendar", "tasks", "gmail"] }
 ```

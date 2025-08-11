@@ -15,6 +15,7 @@ use super::{
 pub struct Uninitialized;
 pub struct TaskListMode;
 pub struct TaskInsertMode;
+pub struct TaskDeleteMode;
 pub struct TasksMode;
 pub struct TaskPatchMode;
 
@@ -41,8 +42,29 @@ impl<'a> TasksClient<'a, Uninitialized> {
             _mode: std::marker::PhantomData,
         }
     }
-    /// Get a list of task lists for the authenticated user.
-    /// This does not retrieve the actual tasks in the lists,
+    /// Get a list of tasklists from the specified user.
+    ///  
+    /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///
+    ///``` rust
+    /// pub async fn get_tasks(State(state): State<AppState>,
+    /// Path((task_list_id): Path<(String, String) -> Json<TaskLists> {
+    ///     let google_client_guard = state.google_client.lock().await;
+    ///     let client = google_client_guard.as_ref().unwrap();
+    ///     let res = TasksClient::new(client)
+    ///         .get_tasks(&task_list_id)
+    ///         .max_results(10)
+    ///         .page_token(1)
+    ///         .show_deleted(false)
+    ///         .request()
+    ///         .await.unwrap();
+    ///
+    ///     Json(res.unwrap_or_default())
+    /// }
+    ///
     pub fn get_task_lists(self) -> TasksClient<'a, TaskListMode> {
         let mut builder = TasksClient {
             request: self.request,
@@ -55,6 +77,28 @@ impl<'a> TasksClient<'a, Uninitialized> {
     }
 
     /// Get a list of tasks from the specified task list.
+    ///  
+    /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///
+    ///``` rust
+    /// pub async fn get_tasks(State(state): State<AppState>,
+    /// Path((task_list_id): Path<(String, String) -> Json<Tasks> {
+    ///     let google_client_guard = state.google_client.lock().await;
+    ///     let client = google_client_guard.as_ref().unwrap();
+    ///     let res = TasksClient::new(client)
+    ///         .get_tasks(&task_list_id)
+    ///         .max_results(10)
+    ///         .page_token(1)
+    ///         .show_deleted(false)
+    ///         .request()
+    ///         .await.unwrap();
+    ///
+    ///     Json(res.unwrap_or_default())
+    /// }
+    ///
     pub fn get_tasks(self, task_list_id: &str) -> TasksClient<'a, TasksMode> {
         let mut builder = TasksClient {
             request: self.request,
@@ -67,6 +111,25 @@ impl<'a> TasksClient<'a, Uninitialized> {
         builder
     }
 
+    /// Insert a task from the specified task list.
+    ///  
+    /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///
+    ///``` rust
+    /// pub async fn get_tasks(State(state): State<AppState>,
+    /// Path((task_id, task_list_id): Path<(String, String) {
+    ///     let google_client_guard = state.google_client.lock().await;
+    ///     let client = google_client_guard.as_ref().unwrap();
+    ///     let res = TasksClient::new(client)
+    ///         .insert_task(&task_list_id)
+    ///         .set_task_notes("This is a new task")
+    ///         .set_task_title("New Task")
+    ///         .request()
+    ///         .await.unwrap();
+    /// }
     pub fn insert_task(self, task_list_id: &str) -> TasksClient<'a, TaskInsertMode> {
         let mut builder = TasksClient {
             request: self.request,
@@ -79,6 +142,23 @@ impl<'a> TasksClient<'a, Uninitialized> {
         builder
     }
 
+    /// Complete a task from the specified task list.
+    ///  
+    /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///
+    ///``` rust
+    /// pub async fn get_tasks(State(state): State<AppState>,
+    /// Path((task_id, task_list_id): Path<(String, String) {
+    ///     let google_client_guard = state.google_client.lock().await;
+    ///     let client = google_client_guard.as_ref().unwrap();
+    ///     let res = TasksClient::new(client)
+    ///         .complete_task(&task_list_id, &task_id)
+    ///         .request()
+    ///         .await.unwrap();
+    /// }
     pub fn complete_task(
         self,
         task_id: &str,
@@ -98,14 +178,61 @@ impl<'a> TasksClient<'a, Uninitialized> {
         builder.request.body = Some(serde_json::to_string(&payload).unwrap());
         builder
     }
+
+    /// Delete a task from the specified task list.
+    ///  
+    /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///
+    ///``` rust
+    /// pub async fn get_tasks(State(state): State<AppState>,
+    /// Path((task_id, task_list_id): Path<(String, String) {
+    ///     let google_client_guard = state.google_client.lock().await;
+    ///     let client = google_client_guard.as_ref().unwrap();
+    ///     let res = TasksClient::new(client)
+    ///         .delete_task(&task_list_id, &task_id)
+    ///         .request()
+    ///         .await.unwrap();
+    /// }
+    ///
+    pub fn delete_task(self, task_id: &str, task_list_id: &str) -> TasksClient<'a, TaskDeleteMode> {
+        let mut builder = TasksClient {
+            request: self.request,
+            task: None,
+            _mode: std::marker::PhantomData,
+        };
+        builder.request.url =
+            format!("https://tasks.googleapis.com/tasks/v1/lists/{task_list_id}/tasks/{task_id}");
+        builder.request.method = reqwest::Method::DELETE;
+        builder
+    }
 }
 
 impl<'a, T> TasksClient<'a, T> {
+    pub(super) async fn make_delete_request(&mut self) -> Result<bool, Error> {
+        self.request.client.refresh_access_token_check().await?;
+        let res = self
+            .request
+            .client
+            .req_client
+            .delete(&self.request.url)
+            .query(&self.request.params)
+            .send()
+            .await?;
+
+        if res.status().is_success() {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
     async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
     where
         R: DeserializeOwned,
     {
-        self.request.client.refresh_acces_token_check().await?;
+        self.request.client.refresh_access_token_check().await?;
         match self.request.method {
             Method::GET => {
                 let res = self
@@ -491,5 +618,15 @@ impl<'a> TasksClient<'a, TaskPatchMode> {
     ///   or an error if the request failed.
     pub async fn request(&mut self) -> Result<Option<Task>, Error> {
         self.make_request().await
+    }
+}
+
+impl<'a> TasksClient<'a, TaskDeleteMode> {
+    /// Makes a request to delete the specified task.
+    ///
+    /// # Returns
+    /// * `Result<bool, Error>` - A result indicating whether the deletion was successful.
+    pub async fn request(&mut self) -> Result<bool, Error> {
+        self.make_delete_request().await
     }
 }

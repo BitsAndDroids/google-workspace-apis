@@ -24,6 +24,9 @@ pub struct EventGetMode;
 pub struct EventListMode;
 /// Indicates that the request builder is initialized for inserting events.
 /// This struct determines which filters can be applied to the request.
+pub struct EventDeleteMode;
+/// Indicates that the request builder is initialized for inserting events.
+/// This struct determines which filters can be applied to the request.
 pub struct EventInsertMode;
 
 pub struct EventPatchMode;
@@ -38,9 +41,9 @@ pub enum EventRequest {
 /// The generic type parameter `T` determines the mode of operation for this client,
 /// which affects which methods are available and what parameters can be set.
 pub struct CalendarEventsClient<'a, T = Uninitialized> {
-    request: Request<'a>,
-    event: Option<EventRequest>,
-    _mode: std::marker::PhantomData<T>,
+    pub(super) request: Request<'a>,
+    pub(super) event: Option<EventRequest>,
+    pub(super) _mode: std::marker::PhantomData<T>,
 }
 
 /// Implementation for the uninitialized event client.
@@ -56,6 +59,10 @@ impl<'a> CalendarEventsClient<'a, Uninitialized> {
     }
     /// Get a list of events from the specified calendar.
     /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///  
     /// ``` rust
     /// #[axum::debug_handler]
     /// pub async fn get_birtday_events(State(state): State<AppState>) -> Json<EventResponse> {
@@ -106,6 +113,10 @@ impl<'a> CalendarEventsClient<'a, Uninitialized> {
     /// A builder configured for inserting a new event
     ///
     /// #Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///  
     /// ```rust
     /// pub async fn insert_new_event(State(state): State<AppState>) {
     ///     let mut google_client_guard = state.google_client.lock().await;
@@ -154,6 +165,11 @@ impl<'a> CalendarEventsClient<'a, Uninitialized> {
     /// # Returns
     ///
     /// A builder configured for patching an existing event
+    ///  
+    ///  # Examples
+    ///   
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
     ///
     /// ``` rust
     ///     async fn update_event(State(state): State<AppState>) {
@@ -183,6 +199,23 @@ impl<'a> CalendarEventsClient<'a, Uninitialized> {
             "https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}"
         );
         builder.request.method = Method::PATCH;
+        builder
+    }
+
+    pub fn delete_event(
+        self,
+        calendar_id: &str,
+        event_id: &str,
+    ) -> CalendarEventsClient<'a, EventDeleteMode> {
+        let mut builder = CalendarEventsClient {
+            request: self.request,
+            event: None,
+            _mode: std::marker::PhantomData,
+        };
+        builder.request.url = format!(
+            "https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}"
+        );
+        builder.request.method = Method::DELETE;
         builder
     }
 }
@@ -326,11 +359,28 @@ impl<'a> CalendarEventsClient<'a, EventListMode> {
 }
 
 impl<'a, T> CalendarEventsClient<'a, T> {
-    async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
+    pub(super) async fn make_delete_request(&mut self) -> Result<bool, Error> {
+        self.request.client.refresh_access_token_check().await?;
+        let res = self
+            .request
+            .client
+            .req_client
+            .delete(&self.request.url)
+            .query(&self.request.params)
+            .send()
+            .await?;
+
+        if res.status().is_success() {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+    pub(super) async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
     where
         R: DeserializeOwned,
     {
-        self.request.client.refresh_acces_token_check().await?;
+        self.request.client.refresh_access_token_check().await?;
         match self.request.method {
             Method::GET => {
                 let res = self
@@ -384,6 +434,7 @@ impl<'a, T> CalendarEventsClient<'a, T> {
                     Ok(None)
                 }
             }
+
             _ => Err(anyhow!("Unsupported HTTP method")),
         }
     }
@@ -834,5 +885,33 @@ impl<'a> CalendarEventsClient<'a, EventPatchMode> {
     /// * `Err` - If there was an error making the request
     pub async fn request(&mut self) -> Result<Option<Event>, Error> {
         self.make_request().await
+    }
+}
+
+impl<'a> CalendarEventsClient<'a, EventDeleteMode> {
+    /// Executes the request to delete the event.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<bool, Error>` - A result indicating whether the deletion was successful.
+    pub async fn request(&mut self) -> Result<(), Error> {
+        match self.make_delete_request().await {
+            Ok(true) => Ok(()),
+            Ok(false) => Err(anyhow::anyhow!("Failed to delete event")),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Guests who should receive notifications about the deletion of the event.
+    /// Acceptable values are:
+    ///
+    /// "all": Notifications are sent to all guests.
+    /// "externalOnly": Notifications are sent to non-Google Calendar guests only.
+    /// "none": No notifications are sent. For calendar migration tasks, consider using the Events.import method instead.
+    pub fn send_updates(mut self, send: &str) -> Self {
+        self.request
+            .params
+            .insert("sendUpdates".to_string(), send.to_string());
+        self
     }
 }
