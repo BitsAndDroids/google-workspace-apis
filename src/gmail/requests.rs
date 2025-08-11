@@ -29,27 +29,19 @@ impl<'a> GmailClient<'a, ()> {
     /// Get a list of emails from the specified user_id.
     /// # Examples
     /// ``` rust
-    /// #[axum::debug_handler]
-    /// pub async fn get_birtday_events(State(state): State<AppState>) -> Json<EventResponse> {
+    /// pub async fn get_emails(State(state): State<AppState>) -> Json<MessageList> {
     ///     //GoogleClient is stored in the AppState wrapped in a Arc<Mutex>
     ///     let google_client_guard = state.google_client.lock().await;
     ///     let client = google_client_guard.as_ref().unwrap();
-    ///     let events = GmailClient::new(client)
-    ///         .get_events("primary")
-    ///         .single_events(true)
-    ///         .event_type(EventType::Birthday)
+    ///     let res = GmailClient::new(client)
+    ///         // "me" is a special value that refers to the authenticated user when used as user_id
+    ///         .get_emails("me")
     ///         .max_results(10)
-    ///         .order_by(google_workspace_apis::calendar::events::requests::EventOrderBy::StartTime)
-    ///         //To avoid retrieving past events we set the time_min to now
-    ///         .time_min(chrono::Utc::now())
-    ///         //Since we retrieve single events get all birthdays for the next year
-    ///         //To avoid retrieving the same birthday multiple times
-    ///         .time_max(chrono::Utc::now() + chrono::Duration::days(365))
     ///         .request()
     ///         .await
     ///         .unwrap();
     ///
-    ///     Json(events.unwrap().items.into())
+    ///     Json(emails.unwrap().items.into())
     /// }
     /// ```
     pub fn get_emails(self, user_id: &str) -> GmailClient<'a, EmailListMode> {
@@ -64,6 +56,22 @@ impl<'a> GmailClient<'a, ()> {
         builder
     }
 
+    /// Get a specific email by user_id and email_id.
+    /// # Examples
+    /// ```rust
+    /// pub async fn get_email(State(state): State<AppState>, Path((user_id, email_id)):
+    /// Path<(String, String)>) -> Json<Message> {
+    ///   let google_client_guard = state.google_client.lock().await;
+    ///   let client = google_client_guard.as_ref().unwrap();
+    ///   let res = GmailClient::new(client)
+    ///   // "me" is a special value that refers to the authenticated user when used as user_id
+    ///   .get_email(user_id, &email_id)
+    ///   .request()
+    ///   .await.unwrap();
+    ///    
+    ///   json!(res.unwrap())
+    /// }
+    /// ```
     pub fn get_email(self, user_id: &str, email_id: &str) -> GmailClient<'a, EmailGetMode> {
         let mut builder = GmailClient {
             request: self.request,
@@ -76,6 +84,22 @@ impl<'a> GmailClient<'a, ()> {
         builder
     }
 
+    /// Delete a specific email by user_id and email_id.
+    /// This will completely remove the email from the user's mailbox (not moved to trash).
+    /// Use trash_email instead if you want to move it to the trash.
+    /// # Examples
+    /// ```rust
+    /// pub async fn delete_email(State(state): State<AppState>, Path((user_id, email_id)):
+    /// Path<(String, String)>) -> Json<()> {
+    ///
+    ///   let google_client_guard = state.google_client.lock().await;
+    ///   let client = google_client_guard.as_ref().unwrap();
+    ///    
+    ///   let res = GmailClient::new(client)
+    ///   // "me" is a special value that refers to the authenticated user when used as user_id
+    ///   .delete_email(&user_id, &email_id)
+    ///   .request()
+    ///```
     pub fn delete_email(self, user_id: &str, email_id: &str) -> GmailClient<'a, EmailDeleteMode> {
         let mut builder = GmailClient {
             request: self.request,
@@ -88,6 +112,21 @@ impl<'a> GmailClient<'a, ()> {
         builder
     }
 
+    /// Trash a specific email by user_id and email_id.
+    /// This will move the email to the trash folder, allowing it to be restored later.
+    /// # Examples
+    /// ```rust
+    /// pub async fn trash_email(State(state): State<AppState>, Path((user_id, email_id)):
+    /// Path<(String, String)>) -> Json<()> {
+    ///
+    ///   let google_client_guard = state.google_client.lock().await;
+    ///   let client = google_client_guard.as_ref().unwrap();
+    ///    
+    ///   let res = GmailClient::new(client)
+    ///   // "me" is a special value that refers to the authenticated user when used as user_id
+    ///   .trash_email(&user_id, &email_id)
+    ///   .request()
+    ///```
     pub fn trash_email(self, user_id: &str, email_id: &str) -> GmailClient<'a, EmailDeleteMode> {
         let mut builder = GmailClient {
             request: self.request,
@@ -101,6 +140,21 @@ impl<'a> GmailClient<'a, ()> {
         builder
     }
 
+    /// Untrash a specific email by user_id and email_id.
+    /// This will move the email from the trash folder, restoring it.
+    /// # Examples
+    /// ```rust
+    /// pub async fn untrash_email(State(state): State<AppState>, Path((user_id, email_id)):
+    /// Path<(String, String)>) -> Json<()> {
+    ///
+    ///   let google_client_guard = state.google_client.lock().await;
+    ///   let client = google_client_guard.as_ref().unwrap();
+    ///    
+    ///   let res = GmailClient::new(client)
+    ///   // "me" is a special value that refers to the authenticated user when used as user_id
+    ///   .untrash_email(&user_id, &email_id)
+    ///   .request()
+    ///```
     pub fn untrash_email(self, user_id: &str, email_id: &str) -> GmailClient<'a, EmailDeleteMode> {
         let mut builder = GmailClient {
             request: self.request,
@@ -220,6 +274,7 @@ impl<'a> GmailClient<'a, EmailListMode> {
         self.make_request().await
     }
 
+    /// Include messages from SPAM and TRASH in the results.
     pub fn include_spam_trash(mut self, incl: bool) -> Self {
         self.request
             .params
@@ -227,6 +282,7 @@ impl<'a> GmailClient<'a, EmailListMode> {
         self
     }
 
+    /// Page token to retrieve a specific page of results in the list.
     pub fn page_token(mut self, token: i32) -> Self {
         self.request
             .params
@@ -234,6 +290,7 @@ impl<'a> GmailClient<'a, EmailListMode> {
         self
     }
 
+    /// Maximum number of messages to return. This field defaults to 100. The maximum allowed value for this field is 500.
     pub fn max_results(mut self, max: u32) -> Self {
         self.request
             .params
@@ -241,6 +298,10 @@ impl<'a> GmailClient<'a, EmailListMode> {
         self
     }
 
+    /// Only return messages matching the specified query.
+    /// Supports the same query format as the Gmail search box.
+    /// For example, "from:someuser@example.com rfc822msgid:<somemsgid@example.com> is:unread".
+    /// Parameter cannot be used when accessing the api using the gmail.metadata scope.
     pub fn query(mut self, query: &str) -> Self {
         self.request
             .params
