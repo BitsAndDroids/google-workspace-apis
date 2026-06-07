@@ -248,6 +248,52 @@ pub struct MessageList {
     pub result_size_estimate: i64,
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, JsonSchema)]
+pub struct DraftList {
+    /**
+     * List of drafts.
+     */
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        deserialize_with = "crate::utils::deserialize::deserialize_nullable_vec::deserialize"
+    )]
+    drafts: Vec<Draft>,
+
+    /**
+     * Token to retrieve the next page of results.
+     */
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "crate::utils::deserialize::deserialize_nullable_string::deserialize",
+        rename = "nextPageToken"
+    )]
+    next_page_token: String,
+
+    /**
+     * Estimated total number of results.
+     */
+    #[serde(
+        default,
+        skip_serializing_if = "crate::utils::validation::zero_i64",
+        deserialize_with = "crate::utils::deserialize::deserialize_nullable_i64::deserialize",
+        rename = "resultSizeEstimate"
+    )]
+    result_size_estimate: i64,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, JsonSchema)]
+pub struct Draft {
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "crate::utils::deserialize::deserialize_nullable_string::deserialize"
+    )]
+    pub id: String,
+    pub message: Message,
+}
+
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
 pub struct ModifyMessageRequest {
     /**

@@ -6,7 +6,7 @@ use crate::{
     auth::client::GoogleClient,
     gmail::{
         helpers::{build_encoded_email_message, DraftInput},
-        types::CreateMessageRequest,
+        types::{CreateMessageRequest, DraftList},
     },
     utils::request::Request,
 };
@@ -17,6 +17,7 @@ pub struct EmailListMode;
 pub struct EmailGetMode;
 pub struct EmailDraftMode;
 pub struct EmailDeleteMode;
+pub struct DraftListMode;
 pub struct TrashEmailMode;
 
 pub struct GmailClient<'a, T, M = ()> {
@@ -141,6 +142,18 @@ impl<'a> GmailClient<'a, (), ()> {
         builder.request.url =
             format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/drafts");
         builder.request.method = reqwest::Method::POST;
+        builder
+    }
+
+    pub fn list_drafts(self, user_id: &str) -> GmailClient<'a, EmailListMode> {
+        let mut builder = GmailClient {
+            request: self.request,
+            message: None,
+            _mode: std::marker::PhantomData,
+        };
+        builder.request.url =
+            format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/drafts");
+        builder.request.method = reqwest::Method::GET;
         builder
     }
 
@@ -351,8 +364,8 @@ where
     }
 }
 
-impl<'a> GmailClient<'a, EmailListMode, ()> {
-    pub async fn request(mut self) -> Result<Option<MessageList>, Error> {
+impl<'a> GmailClient<'a, DraftListMode, ()> {
+    pub async fn request(mut self) -> Result<Option<DraftList>, Error> {
         self.make_request().await
     }
 
@@ -389,6 +402,61 @@ impl<'a> GmailClient<'a, EmailListMode, ()> {
             .params
             .insert("q".to_string(), query.to_string());
         self
+    }
+}
+
+impl<'a> GmailClient<'a, EmailListMode, ()> {
+    pub async fn request(mut self) -> Result<Option<MessageList>, Error> {
+        self.make_request().await
+    }
+}
+
+#[allow(dead_code)]
+trait ListQueryParams {
+    fn set_param(&mut self, key: &str, value: String);
+
+    fn include_spam_trash(mut self, incl: bool) -> Self
+    where
+        Self: Sized,
+    {
+        self.set_param("includeSpamTrash", incl.to_string());
+        self
+    }
+
+    fn page_token(mut self, token: i32) -> Self
+    where
+        Self: Sized,
+    {
+        self.set_param("pageToken", token.to_string());
+        self
+    }
+
+    fn max_results(mut self, max: u32) -> Self
+    where
+        Self: Sized,
+    {
+        self.set_param("maxResults", max.to_string());
+        self
+    }
+
+    fn query(mut self, query: &str) -> Self
+    where
+        Self: Sized,
+    {
+        self.set_param("q", query.to_string());
+        self
+    }
+}
+
+impl<'a> ListQueryParams for GmailClient<'a, EmailListMode, ()> {
+    fn set_param(&mut self, key: &str, value: String) {
+        self.request.params.insert(key.to_string(), value);
+    }
+}
+
+impl<'a> ListQueryParams for GmailClient<'a, DraftListMode, ()> {
+    fn set_param(&mut self, key: &str, value: String) {
+        self.request.params.insert(key.to_string(), value);
     }
 }
 
