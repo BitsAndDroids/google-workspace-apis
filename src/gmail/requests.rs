@@ -3,7 +3,12 @@ use reqwest::Method;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
-    auth::client::GoogleClient, gmail::types::CreateMessageRequest, utils::request::Request,
+    auth::client::GoogleClient,
+    gmail::{
+        helpers::{build_encoded_email_message, DraftInput},
+        types::CreateMessageRequest,
+    },
+    utils::request::Request,
 };
 
 use super::types::{Message, MessageList};
@@ -97,12 +102,36 @@ impl<'a> GmailClient<'a, (), ()> {
         builder
     }
 
+    /// Create a draft email for a user.
+    /// This will create a draft message that can be edited or sent later.
+    ///
+    /// # Examples
+    ///
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///
+    /// ```rust
+    /// pub async fn create_draft(State(state): State<AppState>, Path(user_id):
+    /// Path<String>, Json(draft_input): Json<DraftInput>) -> Json<CreateMessageResponse> {
+    ///
+    ///   let google_client_guard = state.google_client.lock().await;
+    ///   let client = google_client_guard.as_ref().unwrap();
+    ///
+    ///   let res = GmailClient::new(client)
+    ///   // "me" is a special value that refers to the authenticated user when used as user_id
+    ///   .create_draft(&user_id, draft_input)
+    ///   .request().await.unwrap();
+    ///
+    ///   Json(res)
+    /// }
     pub fn create_draft(
         self,
         user_id: &str,
-        message: String,
+        message: DraftInput,
     ) -> GmailClient<'a, EmailDraftMode, CreateMessageRequest> {
-        let message = CreateMessageRequest { raw: message };
+        let message = CreateMessageRequest {
+            raw: build_encoded_email_message(message),
+        };
 
         let mut builder = GmailClient {
             request: self.request,

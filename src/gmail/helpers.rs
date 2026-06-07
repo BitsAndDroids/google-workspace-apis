@@ -18,7 +18,7 @@ pub struct EmailAttachment {
     data: Vec<u8>,
 }
 
-pub fn build_email_message(input: DraftInput) -> String {
+fn build_email_message(input: DraftInput) -> String {
     let boundary = format!(
         "----=_Boundary_{}",
         std::time::SystemTime::now()
@@ -73,7 +73,7 @@ pub fn build_encoded_email_message(input: DraftInput) -> String {
     encode_string_to_base64url(&message)
 }
 
-pub fn encode_string_to_base64url(input: &str) -> String {
+fn encode_string_to_base64url(input: &str) -> String {
     const CUSTOM_ENGINE: engine::GeneralPurpose =
         engine::GeneralPurpose::new(&alphabet::URL_SAFE, general_purpose::NO_PAD);
     CUSTOM_ENGINE.encode(input)
