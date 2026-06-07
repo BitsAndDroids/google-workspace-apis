@@ -1,23 +1,26 @@
 use anyhow::{anyhow, Error};
 use reqwest::Method;
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{auth::client::GoogleClient, utils::request::Request};
+use crate::{
+    auth::client::GoogleClient, gmail::types::CreateMessageRequest, utils::request::Request,
+};
 
 use super::types::{Message, MessageList};
 
 pub struct EmailListMode;
 pub struct EmailGetMode;
+pub struct EmailDraftMode;
 pub struct EmailDeleteMode;
 pub struct TrashEmailMode;
 
-pub struct GmailClient<'a, T> {
+pub struct GmailClient<'a, T, M = ()> {
     pub(super) request: Request<'a>,
-    pub(super) message: Option<Message>,
+    pub(super) message: Option<M>,
     pub(super) _mode: std::marker::PhantomData<T>,
 }
 
-impl<'a> GmailClient<'a, ()> {
+impl<'a> GmailClient<'a, (), ()> {
     pub fn new(client: &'a mut GoogleClient) -> Self {
         GmailClient {
             request: Request::new(client),
@@ -91,6 +94,24 @@ impl<'a> GmailClient<'a, ()> {
         builder.request.url =
             format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/messages/{email_id}");
         builder.request.method = reqwest::Method::GET;
+        builder
+    }
+
+    pub fn create_draft(
+        self,
+        user_id: &str,
+        message: String,
+    ) -> GmailClient<'a, EmailDraftMode, CreateMessageRequest> {
+        let message = CreateMessageRequest { raw: message };
+
+        let mut builder = GmailClient {
+            request: self.request,
+            message: Some(message),
+            _mode: std::marker::PhantomData,
+        };
+        builder.request.url =
+            format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/drafts");
+        builder.request.method = reqwest::Method::POST;
         builder
     }
 
@@ -196,7 +217,7 @@ impl<'a> GmailClient<'a, ()> {
     }
 }
 
-impl<'a, T> GmailClient<'a, T> {
+impl<'a, T, M> GmailClient<'a, T, M> {
     pub(super) async fn delete_request(&mut self) -> Result<(), Error> {
         self.request.client.refresh_access_token_check().await?;
         let res = self
@@ -232,7 +253,12 @@ impl<'a, T> GmailClient<'a, T> {
             Err(anyhow!("Failed to trash email: {}", res.status()))
         }
     }
+}
 
+impl<'a, T, M> GmailClient<'a, T, M>
+where
+    M: Serialize,
+{
     pub(super) async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
     where
         R: DeserializeOwned,
@@ -296,7 +322,7 @@ impl<'a, T> GmailClient<'a, T> {
     }
 }
 
-impl<'a> GmailClient<'a, EmailListMode> {
+impl<'a> GmailClient<'a, EmailListMode, ()> {
     pub async fn request(mut self) -> Result<Option<MessageList>, Error> {
         self.make_request().await
     }
@@ -337,19 +363,19 @@ impl<'a> GmailClient<'a, EmailListMode> {
     }
 }
 
-impl<'a> GmailClient<'a, EmailGetMode> {
+impl<'a> GmailClient<'a, EmailGetMode, ()> {
     pub async fn request(mut self) -> Result<Option<Message>, Error> {
         self.make_request().await
     }
 }
 
-impl<'a> GmailClient<'a, EmailDeleteMode> {
+impl<'a, M> GmailClient<'a, EmailDeleteMode, M> {
     pub async fn request(mut self) -> Result<(), Error> {
         self.delete_request().await
     }
 }
 
-impl<'a> GmailClient<'a, TrashEmailMode> {
+impl<'a, M> GmailClient<'a, TrashEmailMode, M> {
     pub async fn request(mut self) -> Result<(), Error> {
         self.trash_request().await
     }

@@ -303,4 +303,17 @@ impl Default for MessagePart {
 }
 
 pub enum GetMessageFormat {}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, JsonSchema)]
+pub struct CreateMessageRequest {
+    /**
+     * The entire email message in an RFC 2822 formatted and base64url encoded string.
+     */
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "crate::utils::deserialize::deserialize_nullable_string::deserialize"
+    )]
+    pub raw: String,
+}
 //TODO: finish format enum https://developers.google.com/workspace/gmail/api/reference/rest/v1/Format
