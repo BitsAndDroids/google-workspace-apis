@@ -6,7 +6,7 @@ use crate::{
     auth::client::GoogleClient,
     gmail::{
         helpers::{build_encoded_email_message, DraftInput},
-        types::{CreateMessageRequest, DraftList},
+        types::{CreateMessageRequest, Draft, DraftList},
     },
     utils::request::Request,
 };
@@ -18,6 +18,8 @@ pub struct EmailGetMode;
 pub struct EmailDraftMode;
 pub struct EmailDeleteMode;
 pub struct DraftListMode;
+pub struct DraftGetMode;
+pub struct DraftSendMode;
 pub struct TrashEmailMode;
 
 pub struct GmailClient<'a, T, M = ()> {
@@ -55,7 +57,7 @@ impl<'a> GmailClient<'a, (), ()> {
     ///         .await
     ///         .unwrap();
     ///
-    ///     Json(emails.unwrap().items.into())
+    ///     Json(res.unwrap().items.into())
     /// }
     /// ```
     pub fn get_emails(self, user_id: &str) -> GmailClient<'a, EmailListMode> {
@@ -103,6 +105,72 @@ impl<'a> GmailClient<'a, (), ()> {
         builder
     }
 
+    /// Get a list of drafts from the specified user_id.
+    ///
+    /// # Examples
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    /// ``` rust
+    /// pub async fn get_drafts(State(state): State<AppState>) -> Json<DraftList> {
+    ///
+    ///   let google_client_guard = state.google_client.lock().await;
+    ///   let client = google_client_guard.as_ref().unwrap();
+    ///   let res = GmailClient::new(client)
+    ///         // "me" is a special value that refers to the authenticated user when used as user_id
+    ///         .list_drafts("me")`
+    ///         .max_results(10)
+    ///         .request()
+    ///         .await
+    ///         .unwrap();
+    ///
+    ///     Json(res.unwrap().items.into())
+    /// }
+    /// ```
+    pub fn list_drafts(self, user_id: &str) -> GmailClient<'a, DraftListMode> {
+        let mut builder = GmailClient {
+            request: self.request,
+            message: None,
+            _mode: std::marker::PhantomData,
+        };
+        builder.request.url =
+            format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/drafts");
+        builder.request.method = reqwest::Method::GET;
+        builder
+    }
+
+    /// Get a specific draft by user_id and draft_id.
+    ///  
+    /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///  
+    /// ```rust
+    /// pub async fn get_draft(State(state): State<AppState>, Path((user_id, draft_id)):
+    /// Path<(String, String)>) -> Json<Message> {
+    ///   let google_client_guard = state.google_client.lock().await;
+    ///   let client = google_client_guard.as_ref().unwrap();
+    ///   let res = GmailClient::new(client)
+    ///   // "me" is a special value that refers to the authenticated user when used as user_id
+    ///   .get_draft(user_id, &draft_id)
+    ///   .request()
+    ///   .await.unwrap();
+    ///    
+    ///   json!(res.unwrap())
+    /// }
+    /// ```
+    pub fn get_draft(self, user_id: &str, draft_id: &str) -> GmailClient<'a, DraftGetMode> {
+        let mut builder = GmailClient {
+            request: self.request,
+            message: None,
+            _mode: std::marker::PhantomData,
+        };
+        builder.request.url =
+            format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/drafts/{draft_id}");
+        builder.request.method = reqwest::Method::GET;
+        builder
+    }
+
     /// Create a draft email for a user.
     /// This will create a draft message that can be edited or sent later.
     ///
@@ -145,16 +213,104 @@ impl<'a> GmailClient<'a, (), ()> {
         builder
     }
 
-    pub fn list_drafts(self, user_id: &str) -> GmailClient<'a, EmailListMode> {
+    /// Send a draft
+    ///  
+    /// When sending a draft, you can send it as-is, or you can provide updates in the send request.
+    ///  
+    /// To update the draft when sending, supply a drafts resource in the request body of the drafts.send method.
+    /// In the drafts resource, you must specify the draft id of the draft to be sent and set the
+    /// messages.raw field to the new MIME message encoded as a base64URL string.
+    ///
+    /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///
+    /// ```rust
+    /// pub async fn send_draft(State(state): State<AppState>, Path(user_id):
+    /// Path<String>, Json(draft): Json<Draft>) -> Json<Message> {
+    ///
+    ///   let google_client_guard = state.google_client.lock().await;
+    ///   let client = google_client_guard.as_ref().unwrap();
+    ///
+    ///   let res = GmailClient::new(client)
+    ///   // "me" is a special value that refers to the authenticated user when used as user_id
+    ///   .send_draft(&user_id, draft)
+    ///   .request().await.unwrap();
+    ///
+    ///   Json(res)
+    /// }
+    ///
+    /// ````
+    pub async fn send_draft(
+        self,
+        user_id: &str,
+        draft: Draft,
+    ) -> GmailClient<'a, DraftSendMode, Draft> {
         let mut builder = GmailClient {
             request: self.request,
-            message: None,
+            message: Some(draft),
             _mode: std::marker::PhantomData,
         };
         builder.request.url =
             format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/drafts");
-        builder.request.method = reqwest::Method::GET;
+        builder.request.method = reqwest::Method::POST;
         builder
+    }
+
+    /// Retrieve a draft as-is and send it
+    ///  
+    /// This function will retrieve the Draft correspoinding to the provided draft_id  
+    /// It sends the draft without modifications
+    ///
+    /// # Examples
+    ///  
+    /// `Axum is used in this example, but it can be adapted to other frameworks like Actix or
+    /// Rocket.`
+    ///
+    /// ```rust
+    /// pub async fn send_draft_by_id(State(state): State<AppState>, Path((user_id, draft_id)):
+    /// Path<(String, String)>: Json<Draft>) -> Json<Message> {
+    ///
+    ///   let google_client_guard = state.google_client.lock().await;
+    ///   let client = google_client_guard.as_ref().unwrap();
+    ///
+    ///   let res = GmailClient::new(client)
+    ///   // "me" is a special value that refers to the authenticated user when used as user_id
+    ///   .get_and_send_draft_by_id(&user_id, draft_id)
+    ///   .request().await.unwrap();
+    ///
+    ///   Json(res)
+    /// }
+    ///
+    /// ````
+    pub async fn get_and_send_draft_by_id(
+        self,
+        user_id: &str,
+        draft_id: &str,
+    ) -> Result<GmailClient<'a, DraftSendMode, Draft>, Error> {
+        let mut draft_client: GmailClient<'a, DraftGetMode> = GmailClient {
+            request: self.request,
+            message: None,
+            _mode: std::marker::PhantomData,
+        };
+        draft_client.request.url =
+            format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/drafts/{draft_id}");
+        draft_client.request.method = reqwest::Method::GET;
+        let draft = draft_client
+            .request()
+            .await?
+            .ok_or(anyhow!("Draft not found"))?;
+
+        let mut builder = GmailClient {
+            request: draft_client.request,
+            message: Some(draft),
+            _mode: std::marker::PhantomData,
+        };
+        builder.request.url =
+            format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/drafts/{draft_id}/send");
+        builder.request.method = reqwest::Method::POST;
+        Ok(builder)
     }
 
     /// Delete a specific email by user_id and email_id.
@@ -461,6 +617,18 @@ impl<'a> ListQueryParams for GmailClient<'a, DraftListMode, ()> {
 }
 
 impl<'a> GmailClient<'a, EmailGetMode, ()> {
+    pub async fn request(mut self) -> Result<Option<Message>, Error> {
+        self.make_request().await
+    }
+}
+
+impl<'a> GmailClient<'a, DraftGetMode, ()> {
+    pub async fn request(&mut self) -> Result<Option<Draft>, Error> {
+        self.make_request().await
+    }
+}
+
+impl<'a> GmailClient<'a, DraftSendMode, Draft> {
     pub async fn request(mut self) -> Result<Option<Message>, Error> {
         self.make_request().await
     }
