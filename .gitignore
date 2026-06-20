@@ -1,2 +1,4 @@
 /target
 cfg.toml
+.env
+token.json
