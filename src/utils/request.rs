@@ -1,6 +1,7 @@
-use std::collections::HashMap;
-
 use chrono::DateTime;
+use reqwest::StatusCode;
+use std::collections::HashMap;
+use thiserror::Error;
 
 use crate::auth::client::GoogleClient;
 
@@ -32,4 +33,21 @@ pub trait PaginationRequestTrait {
 pub trait TimeRequestTrait {
     fn time_min(self, max: DateTime<chrono::Utc>) -> Self;
     fn time_max(self, token: DateTime<chrono::Utc>) -> Self;
+}
+
+pub struct SuccessResult<R> {
+    pub status: reqwest::StatusCode,
+    pub result: R,
+}
+
+#[derive(Error, Debug)]
+pub enum ApiError {
+    #[error("HTTP {status}: {body}")]
+    HttpError { status: StatusCode, body: String },
+    #[error(transparent)]
+    ReqwestError(#[from] reqwest::Error),
+    #[error(transparent)]
+    SerdeError(#[from] serde_json::Error),
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }

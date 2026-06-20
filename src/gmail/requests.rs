@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use anyhow::{anyhow, Error};
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Serialize};
@@ -5,10 +7,10 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::{
     auth::client::GoogleClient,
     gmail::{
-        helpers::{build_encoded_email_message, DraftInput},
-        types::{CreateMessageRequest, Draft, DraftList},
+        helpers::{build_encoded_email_message, MessageInput},
+        types::{CreateMessageRequest, Draft, DraftList, MessageBody},
     },
-    utils::request::Request,
+    utils::request::{ApiError, Request, SuccessResult},
 };
 
 use super::types::{Message, MessageList};
@@ -17,8 +19,10 @@ pub struct EmailListMode;
 pub struct EmailGetMode;
 pub struct EmailDraftMode;
 pub struct EmailDeleteMode;
+pub struct EmailSendMode;
 pub struct DraftListMode;
 pub struct DraftGetMode;
+pub struct DraftCreateMode;
 pub struct DraftSendMode;
 pub struct TrashEmailMode;
 
@@ -196,19 +200,50 @@ impl<'a> GmailClient<'a, (), ()> {
     pub fn create_draft(
         self,
         user_id: &str,
-        message: DraftInput,
-    ) -> GmailClient<'a, EmailDraftMode, CreateMessageRequest> {
-        let message = CreateMessageRequest {
+        message: MessageInput,
+    ) -> GmailClient<'a, DraftCreateMode, CreateMessageRequest> {
+        let message = MessageBody {
             raw: build_encoded_email_message(message),
         };
+        let draft_body = CreateMessageRequest { message };
 
         let mut builder = GmailClient {
             request: self.request,
-            message: Some(message),
+            message: Some(draft_body),
             _mode: std::marker::PhantomData,
         };
         builder.request.url =
             format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/drafts");
+        builder.request.method = reqwest::Method::POST;
+        builder
+    }
+
+    pub fn create_and_send_email(
+        self,
+        user_id: &str,
+        message: MessageInput,
+    ) -> GmailClient<'a, EmailSendMode, CreateMessageRequest> {
+        let message = MessageBody {
+            raw: build_encoded_email_message(message),
+        };
+        self.send_email_message(user_id, message)
+    }
+
+    pub fn send_email_message(
+        self,
+        user_id: &str,
+        message: MessageBody,
+    ) -> GmailClient<'a, EmailSendMode, CreateMessageRequest> {
+        let email_body = CreateMessageRequest { message };
+
+        let mut builder = GmailClient {
+            request: self.request,
+            message: Some(email_body),
+            _mode: std::marker::PhantomData,
+        };
+
+        builder.request.url =
+            format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/messages/send");
         builder.request.method = reqwest::Method::POST;
         builder
     }
@@ -288,7 +323,7 @@ impl<'a> GmailClient<'a, (), ()> {
         self,
         user_id: &str,
         draft_id: &str,
-    ) -> Result<GmailClient<'a, DraftSendMode, Draft>, Error> {
+    ) -> Result<GmailClient<'a, DraftSendMode, SuccessResult<Draft>>, ApiError> {
         let mut draft_client: GmailClient<'a, DraftGetMode> = GmailClient {
             request: self.request,
             message: None,
@@ -297,10 +332,7 @@ impl<'a> GmailClient<'a, (), ()> {
         draft_client.request.url =
             format!("https://gmail.googleapis.com/gmail/v1/users/{user_id}/drafts/{draft_id}");
         draft_client.request.method = reqwest::Method::GET;
-        let draft = draft_client
-            .request()
-            .await?
-            .ok_or(anyhow!("Draft not found"))?;
+        let draft = draft_client.request().await?;
 
         let mut builder = GmailClient {
             request: draft_client.request,
@@ -457,7 +489,7 @@ impl<'a, T, M> GmailClient<'a, T, M>
 where
     M: Serialize,
 {
-    pub(super) async fn make_request<R>(&mut self) -> Result<Option<R>, Error>
+    pub(super) async fn make_request<R>(&mut self) -> Result<SuccessResult<R>, ApiError>
     where
         R: DeserializeOwned,
     {
@@ -473,10 +505,16 @@ where
                     .send()
                     .await?;
 
-                if res.status().is_success() {
-                    Ok(Some(res.json().await?))
+                let status = res.status();
+                let text = res.text().await?;
+
+                if status.is_success() {
+                    Ok(SuccessResult {
+                        status,
+                        result: serde_json::from_str::<R>(&text)?,
+                    })
                 } else {
-                    Ok(None)
+                    Err(ApiError::HttpError { status, body: text })
                 }
             }
 
@@ -486,15 +524,21 @@ where
                     .client
                     .req_client
                     .post(&self.request.url)
-                    .body(serde_json::to_string(&self.message).unwrap())
+                    .body(serde_json::to_string(&self.message)?)
                     .query(&self.request.params)
                     .send()
                     .await?;
 
-                if res.status().is_success() {
-                    Ok(Some(res.json().await?))
+                let status = res.status();
+                let text = res.text().await?;
+
+                if status.is_success() {
+                    Ok(SuccessResult {
+                        status,
+                        result: serde_json::from_str::<R>(&text)?,
+                    })
                 } else {
-                    Ok(None)
+                    Err(ApiError::HttpError { status, body: text })
                 }
             }
 
@@ -509,19 +553,25 @@ where
                     .send()
                     .await?;
 
-                if res.status().is_success() {
-                    Ok(Some(res.json().await?))
+                let status = res.status();
+                let text = res.text().await?;
+
+                if status.is_success() {
+                    Ok(SuccessResult {
+                        status,
+                        result: serde_json::from_str::<R>(&text)?,
+                    })
                 } else {
-                    Ok(None)
+                    Err(ApiError::HttpError { status, body: text })
                 }
             }
-            _ => Err(anyhow!("Unsupported HTTP method")),
+            _ => Err(ApiError::Other(anyhow!("Unsupported http type"))),
         }
     }
 }
 
 impl<'a> GmailClient<'a, DraftListMode, ()> {
-    pub async fn request(mut self) -> Result<Option<DraftList>, Error> {
+    pub async fn request(mut self) -> Result<SuccessResult<DraftList>, ApiError> {
         self.make_request().await
     }
 
@@ -562,7 +612,7 @@ impl<'a> GmailClient<'a, DraftListMode, ()> {
 }
 
 impl<'a> GmailClient<'a, EmailListMode, ()> {
-    pub async fn request(mut self) -> Result<Option<MessageList>, Error> {
+    pub async fn request(mut self) -> Result<SuccessResult<MessageList>, ApiError> {
         self.make_request().await
     }
 }
@@ -617,19 +667,25 @@ impl<'a> ListQueryParams for GmailClient<'a, DraftListMode, ()> {
 }
 
 impl<'a> GmailClient<'a, EmailGetMode, ()> {
-    pub async fn request(mut self) -> Result<Option<Message>, Error> {
+    pub async fn request(mut self) -> Result<SuccessResult<Message>, ApiError> {
         self.make_request().await
     }
 }
 
 impl<'a> GmailClient<'a, DraftGetMode, ()> {
-    pub async fn request(&mut self) -> Result<Option<Draft>, Error> {
+    pub async fn request(&mut self) -> Result<SuccessResult<Draft>, ApiError> {
+        self.make_request().await
+    }
+}
+
+impl<'a> GmailClient<'a, DraftCreateMode, CreateMessageRequest> {
+    pub async fn request(&mut self) -> Result<SuccessResult<Draft>, ApiError> {
         self.make_request().await
     }
 }
 
 impl<'a> GmailClient<'a, DraftSendMode, Draft> {
-    pub async fn request(mut self) -> Result<Option<Message>, Error> {
+    pub async fn request(mut self) -> Result<SuccessResult<Message>, ApiError> {
         self.make_request().await
     }
 }

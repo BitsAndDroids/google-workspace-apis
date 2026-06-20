@@ -4,7 +4,7 @@ use base64::{
     Engine as _,
 };
 
-pub struct DraftInput {
+pub struct MessageInput {
     pub from: String,
     pub to: String,
     pub subject: String,
@@ -18,7 +18,7 @@ pub struct EmailAttachment {
     data: Vec<u8>,
 }
 
-fn build_email_message(input: DraftInput) -> String {
+fn build_email_message(input: MessageInput) -> String {
     let boundary = format!(
         "----=_Boundary_{}",
         std::time::SystemTime::now()
@@ -36,6 +36,7 @@ fn build_email_message(input: DraftInput) -> String {
     if input.attachments.is_empty() {
         msg.push_str("Content-Type: text/plain; charset=\"UTF-8\"\r\n\r\n");
         msg.push_str(input.body.as_str());
+        println!("message {}", msg);
         return msg;
     }
 
@@ -65,10 +66,11 @@ fn build_email_message(input: DraftInput) -> String {
         }
     }
     msg.push_str(&format!("--{}--\r\n", boundary));
+    println!("message built {}", msg);
     msg
 }
 
-pub fn build_encoded_email_message(input: DraftInput) -> String {
+pub fn build_encoded_email_message(input: MessageInput) -> String {
     let message = build_email_message(input);
     encode_string_to_base64url(&message)
 }

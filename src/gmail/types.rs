@@ -258,7 +258,7 @@ pub struct DraftList {
         skip_serializing_if = "Vec::is_empty",
         deserialize_with = "crate::utils::deserialize::deserialize_nullable_vec::deserialize"
     )]
-    drafts: Vec<Draft>,
+    pub drafts: Vec<Draft>,
 
     /**
      * Token to retrieve the next page of results.
@@ -269,7 +269,7 @@ pub struct DraftList {
         deserialize_with = "crate::utils::deserialize::deserialize_nullable_string::deserialize",
         rename = "nextPageToken"
     )]
-    next_page_token: String,
+    pub next_page_token: String,
 
     /**
      * Estimated total number of results.
@@ -280,7 +280,7 @@ pub struct DraftList {
         deserialize_with = "crate::utils::deserialize::deserialize_nullable_i64::deserialize",
         rename = "resultSizeEstimate"
     )]
-    result_size_estimate: i64,
+    pub result_size_estimate: i64,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, JsonSchema)]
@@ -351,7 +351,7 @@ impl Default for MessagePart {
 pub enum GetMessageFormat {}
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, JsonSchema)]
-pub struct CreateMessageRequest {
+pub struct MessageBody {
     /**
      * The entire email message in an RFC 2822 formatted and base64url encoded string.
      */
@@ -361,5 +361,10 @@ pub struct CreateMessageRequest {
         deserialize_with = "crate::utils::deserialize::deserialize_nullable_string::deserialize"
     )]
     pub raw: String,
+}
+
+#[derive(Serialize)]
+pub struct CreateMessageRequest {
+    pub message: MessageBody,
 }
 //TODO: finish format enum https://developers.google.com/workspace/gmail/api/reference/rest/v1/Format
